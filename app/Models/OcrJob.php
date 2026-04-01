@@ -44,11 +44,21 @@ class OcrJob extends Model
         return $this->status === 'failed';
     }
 
-    /** URL preview foto (public disk) */
+    /** URL preview foto (bisa public disk atau base64 inline) */
     public function previewUrl(): ?string
     {
-        return $this->preview_path
-            ? asset('storage/' . $this->preview_path)
-            : null;
+        if (!$this->preview_path) {
+            return null;
+        }
+
+        // Jalur ByPass: Coba baca file secara langsung dari server untuk menghindari masalah Symlink di Cloud
+        $fullPath = storage_path('app/public/' . $this->preview_path);
+        if (file_exists($fullPath)) {
+            $type = pathinfo($fullPath, PATHINFO_EXTENSION);
+            $data = file_get_contents($fullPath);
+            return 'data:image/' . ($type === 'jpg' ? 'jpeg' : $type) . ';base64,' . base64_encode($data);
+        }
+
+        return asset('storage/' . $this->preview_path);
     }
 }
