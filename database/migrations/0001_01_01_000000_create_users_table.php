@@ -20,7 +20,7 @@ return new class extends Migration
             $table->string('password');
             
             // INI POSISI YANG BENAR:
-            $table->enum('role', ['admin', 'krani', 'petugas_lapangan'])->default('petugas_lapangan');
+            $table->string('role')->default('petugas_lapangan');
             
             $table->rememberToken();
             $table->timestamps();
