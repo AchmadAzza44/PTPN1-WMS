@@ -1,0 +1,99 @@
+@startuml UseCase_Gudang_PTPN1
+left to right direction
+skinparam backgroundColor #FFFFFF
+skinparam usecaseBackgroundColor #FFFFCC
+skinparam usecaseBorderColor #999999
+skinparam actorBorderColor #333333
+skinparam arrowColor #333333
+skinparam packageBorderColor #666666
+skinparam packageBackgroundColor #FAFAFA
+skinparam shadowing true
+skinparam defaultFontSize 11
+
+title Use Case Diagram\nSistem Manajemen Gudang PTPN1 Regional 7
+
+actor "Krani Gudang" as Krani #LightBlue
+actor "Petugas Gudang" as Petugas #LightGreen
+actor "Manager" as Manager #Gold
+actor "Sistem" as Sistem #LightGray
+
+rectangle "Sistem Manajemen Gudang" {
+
+    usecase "Login" as UC_LOGIN
+
+    ' === INBOUND ===
+    usecase "Manajemen\nInbound" as UC_INBOUND
+    usecase "Scan OCR\nDokumen" as UC_OCR
+    usecase "Input Inbound\nManual" as UC_MANUAL
+    usecase "Review & Simpan\nData Inbound" as UC_REVIEW
+    usecase "Proses OCR\ndengan AI" as UC_AI
+
+    ' === OUTBOUND ===
+    usecase "Manajemen\nOutbound" as UC_OUTBOUND
+    usecase "Buat Pengiriman\nBaru" as UC_BUAT_KIRIM
+    usecase "Verifikasi\nBarang Keluar" as UC_VERIF
+    usecase "Konfirmasi\nDetail DO/Qty" as UC_KONFIRMASI
+    usecase "Upload Dokumen\nBertandatangan" as UC_UPLOAD
+    usecase "Cetak Surat\nOtomatis" as UC_CETAK_SURAT
+
+    ' === STOK ===
+    usecase "Melihat Daftar\nStok" as UC_STOK
+    usecase "Kelola Stok\nManual" as UC_CRUD_STOK
+    usecase "Stock Opname" as UC_OPNAME
+
+    ' === MONITORING ===
+    usecase "Melihat\nDashboard" as UC_DASHBOARD
+    usecase "Melihat Arus\nBarang" as UC_ARUS
+    usecase "Cetak Laporan\nHarian" as UC_LAPORAN
+}
+
+' ===== AKTOR → USE CASE =====
+
+' -- Login (semua aktor) --
+Krani --> UC_LOGIN
+Petugas --> UC_LOGIN
+Manager --> UC_LOGIN
+
+' -- Krani Gudang --
+Krani --> UC_OUTBOUND
+Krani --> UC_BUAT_KIRIM
+Krani --> UC_KONFIRMASI
+Krani --> UC_UPLOAD
+Krani --> UC_DASHBOARD
+Krani --> UC_STOK
+Krani --> UC_ARUS
+Krani --> UC_LAPORAN
+
+' -- Petugas Gudang --
+Petugas --> UC_INBOUND
+Petugas --> UC_OCR
+Petugas --> UC_MANUAL
+Petugas --> UC_REVIEW
+Petugas --> UC_VERIF
+Petugas --> UC_OPNAME
+Petugas --> UC_CRUD_STOK
+
+' -- Manager --
+Manager --> UC_DASHBOARD
+Manager --> UC_STOK
+Manager --> UC_ARUS
+Manager --> UC_LAPORAN
+
+' -- Sistem --
+Sistem --> UC_AI
+Sistem --> UC_CETAK_SURAT
+
+' ===== RELASI INCLUDE / EXTEND =====
+
+' Inbound includes
+UC_INBOUND ..> UC_OCR : <<include>>
+UC_INBOUND ..> UC_REVIEW : <<include>>
+UC_OCR ..> UC_AI : <<include>>
+UC_OCR ..> UC_MANUAL : <<extend>>
+
+' Outbound includes
+UC_OUTBOUND ..> UC_BUAT_KIRIM : <<include>>
+UC_BUAT_KIRIM ..> UC_STOK : <<include>>
+UC_VERIF ..> UC_CETAK_SURAT : <<include>>
+
+@enduml

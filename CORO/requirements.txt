@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+Pillow
+requests
+python-multipart
+groq
+python-dotenv
+numpy
+opencv-python-headless

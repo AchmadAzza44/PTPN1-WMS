@@ -1,0 +1,72 @@
+{
+    "name": "PTPN 1 WMS",
+    "short_name": "PTPN1 WMS",
+    "description": "Warehouse Management System PTPN 1 - Kelola stok karet alam dengan OCR berbasis AI",
+    "start_url": "/dashboard",
+    "scope": "/",
+    "display": "standalone",
+    "display_override": [
+        "window-controls-overlay",
+        "standalone",
+        "minimal-ui"
+    ],
+    "orientation": "portrait-primary",
+    "background_color": "#080F1A",
+    "theme_color": "#34A853",
+    "categories": [
+        "business",
+        "productivity"
+    ],
+    "icons": [
+        {
+            "src": "/images/logo-ptpn.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/images/logo-ptpn.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Inbound (Masuk)",
+            "short_name": "Inbound",
+            "description": "Scan dokumen inbound baru",
+            "url": "/ocr/inbound",
+            "icons": [
+                {
+                    "src": "/images/logo-ptpn.png",
+                    "sizes": "96x96"
+                }
+            ]
+        },
+        {
+            "name": "Outbound (Keluar)",
+            "short_name": "Outbound",
+            "description": "Scan dokumen outbound baru",
+            "url": "/ocr/outbound",
+            "icons": [
+                {
+                    "src": "/images/logo-ptpn.png",
+                    "sizes": "96x96"
+                }
+            ]
+        },
+        {
+            "name": "Dashboard",
+            "short_name": "Dashboard",
+            "description": "Lihat ringkasan stok",
+            "url": "/dashboard",
+            "icons": [
+                {
+                    "src": "/images/logo-ptpn.png",
+                    "sizes": "96x96"
+                }
+            ]
+        }
+    ]
+}
