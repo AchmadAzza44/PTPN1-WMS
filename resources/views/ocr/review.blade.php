@@ -368,7 +368,11 @@
                     </a>
                     <button type="submit"
                         style="display:inline-flex;align-items:center;gap:6px;padding:11px 24px;border-radius:10px;border:none;background:{{ $hex }};color:white;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px {{ $hexAlpha }}0.3);">
-                        <i data-lucide="save" style="width:15px;height:15px;"></i> Simpan Data
+                        @if($isOutbound)
+                            <i data-lucide="truck" style="width:15px;height:15px;"></i> Proses Pesanan
+                        @else
+                            <i data-lucide="save" style="width:15px;height:15px;"></i> Simpan Data
+                        @endif
                     </button>
                 </div>
             </form>
@@ -460,11 +464,37 @@
                                 if (window.lucide) lucide.createIcons();
                             }
                         }).then(() => {
-                            window.location.href = "{{ route('ocr.index', ['type' => $type]) }}";
+                            @if($isOutbound)
+                                let params = new URLSearchParams();
+                                @if($jenis === 'do')
+                                    params.append('do_number_manual', document.querySelector('[name="hasil[no_po]"]')?.value || '');
+                                    params.append('contract_number_ref', document.querySelector('[name="hasil[no_kontrak]"]')?.value || '');
+                                    params.append('documented_qty_kg', document.querySelector('[name="hasil[volume]"]')?.value || '');
+                                @elseif($jenis === 'surat_kuasa')
+                                    params.append('do_number_manual', document.querySelector('[name="hasil[no_do]"]')?.value || '');
+                                    params.append('documented_qty_kg', document.querySelector('[name="hasil[jumlah_kg]"]')?.value || '');
+                                @endif
+                                window.location.href = "{{ route('shipments.create') }}?" + params.toString();
+                            @else
+                                window.location.href = "{{ route('ocr.index', ['type' => $type]) }}";
+                            @endif
                         });
                     } else {
                         alert(body.message || 'Data berhasil disimpan');
-                        window.location.href = "{{ route('ocr.index', ['type' => $type]) }}";
+                        @if($isOutbound)
+                            let params = new URLSearchParams();
+                            @if($jenis === 'do')
+                                params.append('do_number_manual', document.querySelector('[name="hasil[no_po]"]')?.value || '');
+                                params.append('contract_number_ref', document.querySelector('[name="hasil[no_kontrak]"]')?.value || '');
+                                params.append('documented_qty_kg', document.querySelector('[name="hasil[volume]"]')?.value || '');
+                            @elseif($jenis === 'surat_kuasa')
+                                params.append('do_number_manual', document.querySelector('[name="hasil[no_do]"]')?.value || '');
+                                params.append('documented_qty_kg', document.querySelector('[name="hasil[jumlah_kg]"]')?.value || '');
+                            @endif
+                            window.location.href = "{{ route('shipments.create') }}?" + params.toString();
+                        @else
+                            window.location.href = "{{ route('ocr.index', ['type' => $type]) }}";
+                        @endif
                     }
                 } else {
                     let errorMsg = body.message || 'Terjadi kesalahan saat menyimpan data.';

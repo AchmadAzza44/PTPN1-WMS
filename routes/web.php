@@ -7,6 +7,17 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\OCRController;
 use App\Http\Controllers\ShipmentController;
+
+// Jalur ByPass untuk hosting Free Tier yang tidak mendukung Storage Link
+Route::get('/cloud-storage/{path}', function ($path) {
+    $fullPath = storage_path('app/public/' . $path);
+    if (file_exists($fullPath)) {
+        $mime = mime_content_type($fullPath);
+        return response()->file($fullPath, ['Content-Type' => $mime]);
+    }
+    abort(404);
+})->where('path', '.*');
+
 Route::get('/', function () {
     if (auth()->check()) {
         $role = auth()->user()->role;
