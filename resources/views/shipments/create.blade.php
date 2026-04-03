@@ -9,6 +9,16 @@
         <form action="{{ route('shipments.store') }}" method="POST" id="shipmentForm">
             @csrf
 
+            <!-- Cek Stok Alert -->
+            <div id="stockAlert" class="hidden mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-xl shadow-sm items-start transition-all">
+                <i data-lucide="alert-triangle" class="w-6 h-6 text-red-500 mr-3 mt-0.5 flex-shrink-0"></i>
+                <div>
+                    <h4 class="text-sm font-bold text-red-800">Stok Gudang Tidak Mencukupi!</h4>
+                    <p class="text-sm text-red-700 mt-1">Stok yang tersedia saat ini (<strong id="availableStockDisplay" class="font-mono">{{ number_format($totalAvailableStock ?? 0, 2) }}</strong> KG) tidak cukup untuk memenuhi target pengiriman yang diminta (<strong id="requestedStockDisplay" class="font-mono">0</strong> KG).</p>
+                    <p class="text-xs text-red-600 mt-1 uppercase font-bold tracking-wide">Tindakan: Silakan turunkan [Volume Pengiriman Saat Ini] untuk melakukan Pengiriman Parsial.</p>
+                </div>
+            </div>
+
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <!-- Left Column: Data Dokumen (OCR Auto-fill) -->
                 <div class="lg:col-span-1 space-y-6">
@@ -53,13 +63,27 @@
                                     class="block w-full border-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-lg shadow-sm bg-white text-sm">
                             </div>
 
-                            <!-- Volume Dokumen -->
+                            @if(isset($preFill['total_pesanan_kg']) && $preFill['total_pesanan_kg'] > 0)
+                            <!-- Informasi Parsial -->
+                            <div class="p-3 bg-yellow-50 border border-yellow-200 rounded-lg space-y-1">
+                                <div class="flex justify-between text-xs">
+                                    <span class="text-yellow-700 font-bold">Total Pesanan DO:</span>
+                                    <span class="text-yellow-800 font-mono">{{ number_format($preFill['total_pesanan_kg'], 2) }} KG</span>
+                                </div>
+                                <div class="flex justify-between text-xs">
+                                    <span class="text-yellow-700 font-bold">Sisa Belum Dikirim:</span>
+                                    <span class="text-yellow-800 font-mono">{{ number_format($preFill['sisa_pesanan_kg'], 2) }} KG</span>
+                                </div>
+                            </div>
+                            @endif
+
+                            <!-- Volume Pengiriman Saat Ini -->
                             <div>
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Volume Dokumen
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Volume Pengiriman Saat Ini
                                     (Kg)</label>
                                 <div class="relative">
-                                    <input type="number" step="0.01" name="documented_qty_kg"
-                                        value="{{ $preFill['documented_qty_kg'] ?? '' }}" placeholder="0.00" required
+                                    <input type="number" step="0.01" name="documented_qty_kg" id="documentedQtyInput"
+                                        value="{{ $preFill['documented_qty_kg'] ?? '' }}" placeholder="0.00" required oninput="checkStockWarning(); recalculateFIFO();"
                                         class="block w-full border-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-lg shadow-sm bg-white text-sm font-mono font-bold text-blue-600 pr-12">
                                     <span
                                         class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">KG</span>
@@ -67,8 +91,7 @@
                             </div>
                         </div>
 
-                        <p class="text-[10px] text-slate-400 mt-4 italic">* Data di atas terisi dari hasil scan dokumen.
-                            Silakan edit jika ada kesalahan OCR.</p>
+                        <p class="text-[10px] text-slate-400 mt-4 italic">* Anda dapat mengirim secara parsial (sebagian). Sisa pesanan akan dicatat untuk pengiriman selanjutnya.</p>
                     </div>
                 </div>
 
@@ -115,6 +138,23 @@
     <!-- Scripts -->
     <script>
         let stocks = @json($stocks);
+        const totalAvailableStock = {{ $totalAvailableStock ?? 0 }};
+
+        function checkStockWarning() {
+            const input = document.getElementById('documentedQtyInput');
+            const targetQty = parseFloat(input.value) || 0;
+            const alertEl = document.getElementById('stockAlert');
+            const displayEl = document.getElementById('requestedStockDisplay');
+            
+            if (targetQty > totalAvailableStock && targetQty > 0) {
+                alertEl.classList.remove('hidden');
+                alertEl.classList.add('flex');
+                displayEl.textContent = targetQty.toLocaleString('id-ID', {minimumFractionDigits: 0, maximumFractionDigits: 2});
+            } else {
+                alertEl.classList.add('hidden');
+                alertEl.classList.remove('flex');
+            }
+        }
 
         function addRow() {
             const container = document.getElementById('items-container');
@@ -200,25 +240,36 @@
             document.getElementById('totalWeightDisplay').textContent = total.toLocaleString('id-ID');
         }
 
-        // FIFO Auto-Recommendation
-        document.addEventListener('DOMContentLoaded', () => {
-            const targetQty = parseFloat('{{ $preFill["documented_qty_kg"] ?? 0 }}');
+        let isFifoGenerated = false;
+        
+        function recalculateFIFO(force = false) {
+            if (isFifoGenerated && !force) return;
 
-            if (targetQty > 0 && stocks.length > 0) {
-                // Auto-recommend lots using FIFO
-                let remaining = targetQty;
-                let usedCount = 0;
+            const input = document.getElementById('documentedQtyInput');
+            const targetQty = parseFloat(input.value) || 0;
+            
+            // Only auto-recommend if target is smaller or eq to available limit to not spam errors
+            const allocTarget = Math.min(targetQty, totalAvailableStock);
 
-                // Show recommendation banner
+            if (allocTarget > 0 && stocks.length > 0 && !isFifoGenerated) {
+                isFifoGenerated = true;
                 const container = document.getElementById('items-container');
-                const banner = document.createElement('div');
-                banner.className = 'p-3 bg-green-50 border border-green-200 rounded-xl mb-3 flex items-center text-sm';
-                banner.innerHTML = `
-                        <i data-lucide="sparkles" class="w-4 h-4 text-green-600 mr-2 flex-shrink-0"></i>
-                        <span class="text-green-700 font-bold">Rekomendasi FIFO</span>
-                        <span class="text-green-600 ml-2">— Sistem mengalokasikan ${targetQty.toLocaleString('id-ID')} Kg dari lot terlama.</span>
-                    `;
-                container.parentElement.insertBefore(banner, container);
+                container.innerHTML = ''; // safe clear
+
+                let remaining = allocTarget;
+
+                // Show recommendation banner if not exists
+                if (!document.getElementById('fifoBanner')) {
+                    const banner = document.createElement('div');
+                    banner.id = 'fifoBanner';
+                    banner.className = 'p-3 bg-green-50 border border-green-200 rounded-xl mb-3 flex items-center text-sm';
+                    banner.innerHTML = `
+                            <i data-lucide="sparkles" class="w-4 h-4 text-green-600 mr-2 flex-shrink-0"></i>
+                            <span class="text-green-700 font-bold">Rekomendasi FIFO</span>
+                            <span class="text-green-600 ml-2 shadow-text">— Sistem mengalokasikan stok secara otomatis dari lot terlama.</span>
+                        `;
+                    container.parentElement.insertBefore(banner, container);
+                }
 
                 for (let i = 0; i < stocks.length && remaining > 0; i++) {
                     const stock = stocks[i];
@@ -228,13 +279,12 @@
 
                     // Create row
                     addRow();
-                    usedCount++;
-
+                    
                     // Get the latest row
                     const rows = container.querySelectorAll('.item-row');
                     const row = rows[rows.length - 1];
                     const select = row.querySelector('select');
-                    const input = row.querySelector('.qty-input');
+                    const qtyInput = row.querySelector('.qty-input');
                     const hint = row.querySelector('.max-hint');
 
                     // Auto-select this stock
@@ -246,8 +296,8 @@
                     }
 
                     // Set qty and max
-                    input.value = allocate.toFixed(2);
-                    input.max = stock.remaining_weight.toFixed(2);
+                    qtyInput.value = allocate.toFixed(2);
+                    qtyInput.max = stock.remaining_weight.toFixed(2);
                     hint.textContent = `Maks: ${stock.remaining_weight.toLocaleString()} kg`;
                     hint.classList.add('text-blue-500');
 
@@ -264,9 +314,16 @@
                 }
 
                 calculateTotal();
-                lucide.createIcons();
+                if(window.lucide) window.lucide.createIcons();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            checkStockWarning();
+            const targetQty = parseFloat(document.getElementById('documentedQtyInput').value) || 0;
+            if (targetQty > 0) {
+                recalculateFIFO();
             } else {
-                // No OCR data, just add empty row
                 addRow();
             }
         });

@@ -28,12 +28,32 @@ class ShipmentController extends Controller
      */
     public function create(Request $request)
     {
+        $doNumber = $request->query('do_number_manual');
         // Ambil data pre-fill dari OCR (jika ada)
         $preFill = [
-            'do_number_manual' => $request->query('do_number_manual'),
+            'do_number_manual' => $doNumber,
             'contract_number_ref' => $request->query('contract_number_ref'),
             'documented_qty_kg' => $request->query('documented_qty_kg'),
+            'sisa_pesanan_kg' => null,
+            'total_pesanan_kg' => null,
         ];
+
+        // Jika DO number ada, cari apakah sudah pernah ada PO ini (untuk parsial)
+        if ($doNumber) {
+            $po = \App\Models\PurchaseOrder::where('po_number', $doNumber)->first();
+            if ($po) {
+                if (empty($preFill['contract_number_ref']) && $po->contract) {
+                    $preFill['contract_number_ref'] = $po->contract->contract_number;
+                }
+                $preFill['total_pesanan_kg'] = $po->qty_ordered_kg;
+                $rem = max(0, $po->qty_ordered_kg - $po->qty_served_kg);
+                $preFill['sisa_pesanan_kg'] = $rem;
+                // Saran pengiriman saat ini adalah sisa pesanannya
+                if ($rem > 0) {
+                    $preFill['documented_qty_kg'] = $rem;
+                }
+            }
+        }
 
         // Ambil stok yang tersedia (Status Blue atau Yellow), exclude Orange (Kosong)
         $stocks = StockLot::whereIn('status', ['blue', 'yellow'])
@@ -42,7 +62,6 @@ class ShipmentController extends Controller
                     $query->where('net_weight_kg', '>', 0);
                 }
             ])
-
             ->orderBy('inbound_at', 'asc') // FIFO Rules
             ->get()
             ->map(function ($lot) {
@@ -57,7 +76,9 @@ class ShipmentController extends Controller
                 return $lot;
             });
 
-        return view('shipments.create', compact('stocks', 'preFill'));
+        $totalAvailableStock = $stocks->sum('remaining_weight');
+
+        return view('shipments.create', compact('stocks', 'preFill', 'totalAvailableStock'));
     }
 
     /**
@@ -87,21 +108,29 @@ class ShipmentController extends Controller
                 ]
             );
 
-            // 2. Auto-create PO from DO number
-            $po = \App\Models\PurchaseOrder::firstOrCreate(
-                [
+            // Cek exist PO
+            $do_number = $request->do_number_manual ?? ('PO-' . now()->format('ymd-His'));
+            $po = \App\Models\PurchaseOrder::where('po_number', $do_number)->first();
+            
+            // Variabel ini diperlukan untuk total beban pada PO 
+            $requested_do_qty = $request->documented_qty_kg ?? 0;
+
+            if (!$po) {
+                // 2. Auto-create PO jika tidak ada
+                $po = \App\Models\PurchaseOrder::create([
                     'contract_id' => $contract->id,
-                    'po_number' => $request->do_number_manual ?? ('PO-' . now()->format('ymd-His')),
-                ],
-                [
+                    'po_number' => $do_number,
                     'po_date' => now(),
-                    'qty_ordered_kg' => $request->documented_qty_kg ?? 0,
+                    'qty_ordered_kg' => $requested_do_qty,
                     'qty_served_kg' => 0,
                     'status' => 'open'
-                ]
-            );
+                ]);
+            }
 
-            // 3. Create Shipment (tanpa data supir/nopol — bukan bagian alur outbound)
+            // Hitung total diangkut untuk Shipment ini
+            $totalLoaded = collect($request->items)->sum('qty_loaded_kg');
+
+            // 3. Create Shipment 
             $shipment = Shipment::create([
                 'purchase_order_id' => $po->id,
                 'transporter_name' => '-',
@@ -111,11 +140,11 @@ class ShipmentController extends Controller
                 'weather_condition' => 'Cerah',
                 'dispatched_at' => now(),
                 'status' => 'draft',
-                'do_number_manual' => $request->do_number_manual ?? null,
-                'documented_qty_kg' => $request->documented_qty_kg ?? 0,
+                'do_number_manual' => $do_number,
+                'documented_qty_kg' => $totalLoaded, // Set ke jumlah yang benar-benar dikirim pada pengiriman ini
             ]);
 
-            // 2. Process Items
+            // 4. Process Items
             foreach ($request->items as $item) {
                 $stockLot = StockLot::find($item['stock_lot_id']);
 
@@ -136,9 +165,16 @@ class ShipmentController extends Controller
                 ]);
             }
 
+            // Update qty_served_kg pada PO
+            $po->qty_served_kg += $totalLoaded;
+            if ($po->qty_served_kg >= $po->qty_ordered_kg) {
+                $po->status = 'completed';
+            }
+            $po->save();
+
             DB::commit();
 
-            return redirect()->route('shipments.show', $shipment->id)->with('success', 'Pengiriman berhasil dibuat! Silakan lanjut ke verifikasi.');
+            return redirect()->route('shipments.show', $shipment->id)->with('success', 'Pengiriman parsial/penuh berhasil dibuat! Silakan lanjut ke verifikasi.');
 
         } catch (\Exception $e) {
             DB::rollBack();
