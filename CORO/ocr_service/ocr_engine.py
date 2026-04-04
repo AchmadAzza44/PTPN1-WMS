@@ -60,8 +60,8 @@ MAX_TOKENS = {
     "sir20_table":   2200,  # Pass-2: hanya tabel (banyak baris, perlu token besar)
     "sir20":         2500,  # Single-pass fallback
     "rss1":          1800,  # RSS1 table bisa panjang
-    "do":            900,
-    "surat_kuasa":   1000,
+    "do":            1500,  # DO bisa punya banyak field
+    "surat_kuasa":   2500,  # Multi-format, multi-item — butuh token besar
 }
 
 BULAN = {
@@ -270,75 +270,178 @@ Output ONLY this JSON:
 {"no_dokumen":null,"tanggal":null,"kebun":null,"mutu":null,"jumlah_bale":0,"berat_netto_total":0,"pengangkut":null,"no_kendaraan":null,"nomor_bale":[],"nomor_urut_bale":[]}""" + JSON_STRICT
 
 
-PROMPT_DO = """You are reading a printed Sales Order from PT Perkebunan Nusantara I Regional VII (Eks PTPN VII).
+PROMPT_DO = """You are an expert document reader for a rubber warehouse management system.
+You are reading a DELIVERY ORDER (DO) or SALES ORDER (SO) document. This is a PRINTED document from PT Perkebunan Nusantara (PTPN) or related rubber company.
 
-ALL text is PRINTED (computer-generated). Read carefully, mark null only if truly invisible.
+⚠️ CRITICAL RULES:
+1. Read the ACTUAL document — do NOT invent or guess values. Use null for unreadable fields.
+2. DOT in numbers = THOUSANDS separator: "60.480" = 60480 kg, "1.200" = 1200 kg
+3. Dates: output as "DD.MM.YYYY" exactly as printed. If format differs, normalize to DD.MM.YYYY.
+4. Read ALL text carefully — the document layout may vary between companies.
 
-TOP-RIGHT box "Sales Order":
-  no_so_internal      ← "No.SO Internal" e.g. "1316018648"
-  tanggal_so          ← "Tanggal" e.g. "07.01.2026"
-  no_kontrak_internal ← "No.Kontrak Internal" e.g. "1116013277"
+EXTRACT the following information by MEANING (not by fixed position):
 
-LEFT "Kepada"/"Pembeli":
-  nama_pembeli   ← company name e.g. "PT. BITUNG GUNASEJAHTERA"
-  alamat_pembeli ← full address (multi-line ok)
+[no_so_internal] — Internal SO/DO document number (usually numeric, 10+ digits)
+  Look for: "No.SO Internal", "No.SO", "No. Dokumen", or any primary document ID
 
-RIGHT "Informasi" box:
-  no_po           ← "No.PO" e.g. "014/KARET SC/2026"
-  tanggal_po      ← "Tgl.PO" e.g. "07.01.2026"
-  no_kontrak      ← "No.Kontrak" e.g. "1794/HO-SUPCO/SIR-L/N-I/IX/2025"
-  tanggal_kontrak ← "Tgl.Kontrak" e.g. "25.09.2025"
-  incoterms       ← e.g. "Free on board"
-  lokasi          ← location after incoterms e.g. "IPMG Bengkulu"
+[tanggal_so] — Document creation date
+  Look for: "Tanggal", "Tgl", "Date" near the document header
 
-Product table (1 row):
-  no_material ← e.g. "11003903"
-  deskripsi   ← e.g. "SIR 20 (PAWI)"
-  volume      ← DOT=thousands: "60.480"=60480 (integer)
-  terbilang   ← e.g. "ENAM PULUH RIBU EMPAT RATUS DELAPAN PULUH"
+[no_kontrak_internal] — Internal contract reference number
+  Look for: "No.Kontrak Internal", "Internal Contract"
+
+[no_po] — Purchase Order / DO number from buyer
+  Look for: "No.PO", "PO No", "No. DO", "DO Number" — this is the buyer's reference
+  Format varies: "014/KARET SC/2026", "0205/KARET SC/2026", etc.
+
+[tanggal_po] — PO/DO date
+  Look for: "Tgl.PO", "Tanggal PO", "PO Date"
+
+[nama_pembeli] — Buyer company name
+  Look for: "Kepada", "Pembeli", "Buyer", "Sold to" — the company receiving goods
+
+[alamat_pembeli] — Buyer's full address (multi-line is ok, join with comma)
+
+[no_kontrak] — Contract number (external/sales contract)
+  Look for: "No.Kontrak", "Contract No", "Kontrak" — usually alphanumeric with slashes
+
+[tanggal_kontrak] — Contract date
+  Look for: "Tgl.Kontrak", "Contract Date"
+
+[incoterms] — Trade terms
+  Look for: "Incoterms", "FOB", "CIF", "Free on board"
+
+[lokasi] — Delivery location
+  Look for: location name after incoterms, or "Lokasi", "Gudang", "Destination"
+
+[no_material] — Material/product code (usually numeric)
+  Look for: "No. Material", "Material", "Kode Produk"
+
+[deskripsi] — Product description
+  Look for: "Deskripsi", "Material", product name like "SIR 20", "RSS 1"
+
+[volume] — Total weight/volume in kg (INTEGER after removing thousand separators)
+  Look for: "Volume", "Qty", "Kuantitas", "Jumlah", "Weight"
+  REMEMBER: "60.480" = 60480 (dot is thousand sep)
+
+[terbilang] — Weight in words (Indonesian)
+  Look for: "Terbilang", text in ALL CAPS describing the number
 
 Output RAW JSON only:
 {"no_so_internal":null,"tanggal_so":null,"no_kontrak_internal":null,"no_po":null,"tanggal_po":null,"no_kontrak":null,"tanggal_kontrak":null,"incoterms":null,"lokasi":null,"nama_pembeli":null,"alamat_pembeli":null,"no_material":null,"deskripsi":null,"volume":0,"terbilang":null}""" + JSON_STRICT
 
 
-PROMPT_SURAT_KUASA = """Read a "SURAT KUASA" (Power of Attorney) document from a rubber export company.
-Layout: letterhead → title → fields → signatures. Mix of printed and handwritten text.
+PROMPT_SURAT_KUASA = """You are an expert document reader working in a rubber warehouse (PTPN). You will read a "SURAT KUASA" (Power of Attorney) document.
 
-⚠️ ANTI-HALLUCINATION: null if you cannot read a field. Never invent.
+⚠️ CRITICAL — EVERY COMPANY HAS A DIFFERENT FORMAT.
+Do NOT assume any specific layout or label positions.
+Instead, READ the ENTIRE document and extract information based on MEANING and CONTEXT.
+Output null for any field you truly cannot find — NEVER invent or guess.
 
-[no_surat_kuasa] ← Document code typically below the "SURAT KUASA" title
-  Format: LOCXXX-YYMM-NNNN e.g. "LOCBGS-2601-0014", "LOCBGS-2602-0007"
-  Also may appear as alphanumeric near the title.
+=== HOW TO READ (think step by step) ===
+1. First, identify the COMPANY from the letterhead/header (logo, company name at top)
+2. Find the document title (usually "SURAT KUASA" somewhere prominent)
+3. Scan for any document number/reference near the title or header area
+4. Read the body text — identify WHO grants power, TO WHOM, and FOR WHAT
+5. Look for goods/shipment details anywhere in the body
+6. Check footer area for dates, signatures, and location info
 
-[tanggal] ← Date, often in bottom-left area: "City, DD MonthName YYYY"
-  Extract ONLY the date part: "8 Januari 2026", "15 Februari 2026"
+=== INFORMATION TO EXTRACT (by meaning, not position) ===
 
-[nama_pemberi] ← After label "NAMA" or "Yang bertanda tangan": "TIMMIE MELVIN", "BUDI SANTOSO"
+── DOCUMENT IDENTITY ──
+[no_surat_kuasa] — The document's own number/code. Could appear as:
+  • "LOCBGS-2603-0011" (code format near title)
+  • "Ref.no.00773/WTP/I/2025" or "Reff no.0259/WTP/III/26" (reference number)
+  • "No: SK-2603-001" or any alphanumeric identifier
+  • Extract the FULL code exactly as written. ANY format is valid.
 
-[perusahaan_pemberi] ← After label "PERUSAHAAN": "PT. BITUNG GUNASEJAHTERA"
+[tanggal] — Document date. Could appear as:
+  • "Jakarta, 11 Januari 2025" → extract "11 Januari 2025"
+  • "Rangkas Bitung 4 Maret 2025" → extract "4 Maret 2025"
+  • "06 Maret 2026" / "04-mrt-26" / "04/03/2026"
+  • Look EVERYWHERE: header, body, footer, near signatures
+  • Output format: "DD MonthName YYYY" (Indonesian month names)
 
-[alamat_pemberi] ← After label "ALAMAT" (may be multi-line):
-  e.g. "Jl. Syech Nawawi Al-Bantani No.33 Bengkulu"
+── WHO IS INVOLVED ──
+[nama_pemberi] — Person GRANTING the power of attorney (pemberi kuasa)
+  • Look for: "Yang bertanda tangan", "NAMA", name near "Yang Memberi Kuasa" signature
+  • Could be in body text or signature area at bottom
 
-[nama_penerima] ← Near "Penerima Kuasa" (usually bottom-right signature area):
-  e.g. "RELA SUMADIYANA", "AHMAD FAUZI"
+[perusahaan_pemberi] — Company of the person granting power
+  • Usually the company on the LETTERHEAD (header/logo area)
+  • Or after "PERUSAHAAN" label, or near pemberi kuasa's name
+  • e.g. "PT. BITUNG GUNASEJAHTERA", "PT. WILSON TUNGGAL PERKASA", "PT. Jaya Asri Niaga"
 
-[jenis_karet] ← Rubber type in document body: "SIR 20 SEP", "SIR 20", "RSS 1"
+[alamat_pemberi] — Address of the granting party (may be multi-line, join with comma)
 
-[jumlah_kg] ← Weight in kg, DOT=thousands: "60.480"=60480
+[nama_penerima] — Person RECEIVING the power of attorney (penerima kuasa)
+  • Look for: "Penerima Kuasa", "memberikan kuasa kepada", "Nama" in body
+  • Or name near "Yang Menerima Kuasa" signature at bottom
+  • Could also be a company name like "CV. DELTA KENCANA"
 
-[jumlah_pallet] ← Pallet count (integer): 48, 36, 24
+── GOODS & SHIPMENT DETAILS ──
+[jenis_karet] — Type/grade of rubber being shipped
+  • Look for: "SIR 20", "SIR 20 SEP", "SIR20", "RSS 1", "Natural Rubber SIR20"
+  • May appear anywhere in document body
+  • If multiple grades mentioned, list all separated by comma
 
-[no_do] ← DO or PO reference number: "014/KARET SC/2026"
+[jumlah_kg] — Total weight in kilograms (INTEGER)
+  • DOT = thousands separator: "100.800" = 100800, "80.640" = 80640
+  • COMMA = thousands in some formats: "80,640" = 80640
+  • Look for: "Kuantitas", "kg", "Berat", weight values, or calculated from item details
+  • If multiple items: SUM all weights
 
-[trucking] ← Full text after "Trucking:" label
+[jumlah_pallet] — Number of pallets or packaging units (integer)
+  • Look for: "Pallet", "PALLET", "Bale", "packing", quantities like "80 PALLET", "64"
 
-[stuffing] ← Full text after "Stuffing:" label
+[no_do] — DO (Delivery Order) or PO reference numbers
+  • Look for: "No.DO", "DO No", "DO NO", "No. PO", "pengiriman No. DO"
+  • Could be one or multiple: "014/KARET SC/2026" or "0205/KARET SC/2026, 0206/KARET SC/2026"
+  • If multiple DOs found, join with comma
 
-[tujuan] ← Full text after "Dengan tujuan" or "Tujuan:" label
+[no_kontrak] — Contract number(s)
+  • Look for: "Nomor Kontrak", "No.Kontrak", "Kontrak", "Contract"
+  • e.g. "P1776-25 SC 1820", "1794/HO-SUPCO/SIR-L/N-I/IX/2025"
+  • If multiple, join with comma
+
+[bl_invoice] — BL (Bill of Lading) or Invoice numbers
+  • Look for: "BL.", "B/L", "Inv.", "Invoice", "BL.0476/24 SC"
+  • If multiple, join with comma. e.g. "BL.0476/24 SC & Inv.0104"
+
+── LOGISTICS ──
+[jasa_expedisi] — Expedition/transport service company and contact
+  • Look for: "Jasa Expedisi", "Expedisi", "PIC", transporter name & phone
+  • e.g. "CV. DELTA KENCANA - PAK DANIEL - TELP 0852 6985 2222"
+
+[trucking] — Trucking company/info
+  • Look for: "Trucking", "Trucking:", carrier company name
+  • e.g. "CV BAROKAH" or full address
+
+[stuffing] — Stuffing location/company
+  • Look for: "Stuffing", "Stuffing:", loading point
+  • e.g. "PT.PERKEBUNAN NUSAN TARA VII-BENGKULU"
+
+[tujuan] — Shipping destination(s)
+  • Look for: "Dengan tujuan", "Tujuan", "Dikirim ke", "Barang dikirim ke"
+  • If multiple destinations, include ALL separated by semicolons
+  • Include full address if available
+
+[packing] — Packing specification
+  • Look for: "Packing", "packing:", "Kemasan"
+  • e.g. "64 X 1.260 PERSHRINKWRAPPED", "80 x 1.260 kg/pallet"
+
+[no_kendaraan] — Vehicle plate number(s) if mentioned
+  • Indonesian plate format: "BD 8371 P", "BG 1234 AB"
+
+── SHIPMENT ITEMS (if document lists MULTIPLE separate shipments) ──
+[items] — Array of individual shipment entries. ONLY populate if the document
+  explicitly lists separate shipment lines (e.g. multiple BL numbers with
+  separate weights, multiple delivery dates, multiple destinations).
+  Leave as empty array [] if there is only ONE shipment described.
+  Each item: {"bl_number": ..., "grade": ..., "quantity_kg": ..., "pallet_count": ..., "do_number": ...}
 
 Output ONLY this JSON:
-{"no_surat_kuasa":null,"tanggal":null,"nama_pemberi":null,"perusahaan_pemberi":null,"alamat_pemberi":null,"nama_penerima":null,"jenis_karet":null,"jumlah_kg":0,"jumlah_pallet":0,"no_do":null,"trucking":null,"stuffing":null,"tujuan":null}""" + JSON_STRICT
+{"no_surat_kuasa":null,"tanggal":null,"nama_pemberi":null,"perusahaan_pemberi":null,"alamat_pemberi":null,"nama_penerima":null,"jenis_karet":null,"jumlah_kg":0,"jumlah_pallet":0,"no_do":null,"no_kontrak":null,"bl_invoice":null,"jasa_expedisi":null,"trucking":null,"stuffing":null,"tujuan":null,"packing":null,"no_kendaraan":null,"items":[]}""" + JSON_STRICT
 
 
 # ─── EMPTY TEMPLATES ─────────────────────────────────────────────────────────
@@ -346,7 +449,7 @@ EMPTY = {
     "sir20":       {"no_surat":None,"tanggal":None,"no_kendaraan":None,"nama_supir":None,"baris":[],"total_kg":0,"total_bale":0},
     "rss1":        {"no_dokumen":None,"tanggal":None,"kebun":None,"mutu":None,"jumlah_bale":0,"berat_netto_total":0,"pengangkut":None,"no_kendaraan":None,"nomor_bale":[],"nomor_urut_bale":[]},
     "do":          {"no_so_internal":None,"tanggal_so":None,"no_kontrak_internal":None,"no_po":None,"tanggal_po":None,"no_kontrak":None,"tanggal_kontrak":None,"incoterms":None,"lokasi":None,"nama_pembeli":None,"alamat_pembeli":None,"no_material":None,"deskripsi":None,"volume":0,"terbilang":None},
-    "surat_kuasa": {"no_surat_kuasa":None,"tanggal":None,"nama_pemberi":None,"perusahaan_pemberi":None,"alamat_pemberi":None,"nama_penerima":None,"jenis_karet":None,"jumlah_kg":0,"jumlah_pallet":0,"no_do":None,"trucking":None,"stuffing":None,"tujuan":None},
+    "surat_kuasa": {"no_surat_kuasa":None,"tanggal":None,"nama_pemberi":None,"perusahaan_pemberi":None,"alamat_pemberi":None,"nama_penerima":None,"jenis_karet":None,"jumlah_kg":0,"jumlah_pallet":0,"no_do":None,"no_kontrak":None,"bl_invoice":None,"jasa_expedisi":None,"trucking":None,"stuffing":None,"tujuan":None,"packing":None,"no_kendaraan":None,"items":[]},
 }
 
 # ─── ENGINE ──────────────────────────────────────────────────────────────────
@@ -935,6 +1038,107 @@ class OCREngine:
 
     # ── blur detection ────────────────────────────────────────────────────────
 
+    def _clean_kg_value(self, val) -> int:
+        """Parse weight value yang bisa dalam berbagai format ke integer kg.
+        "100.800" → 100800, "80,640" → 80640, "60480" → 60480, "100.800 kg" → 100800
+        """
+        if val is None: return 0
+        if isinstance(val, (int, float)): 
+            return int(val) if val > 100 else int(val * 1000)  # 80.640 float = 80640
+        s = str(val).strip().lower().replace('kg', '').replace(' ', '').strip()
+        if not s: return 0
+        # Detect format: if has both dot and comma → dot is thousands, comma decimal (or vice versa)
+        # Indonesian: dot is thousands separator, comma is decimal
+        if '.' in s and ',' in s:
+            # "100.800,00" → thousands=dot, decimal=comma
+            s = s.replace('.', '').replace(',', '.')
+        elif '.' in s:
+            # Check if dot is thousands sep: "100.800" has 3 digits after dot
+            parts = s.split('.')
+            if len(parts) == 2 and len(parts[1]) == 3:
+                s = s.replace('.', '')  # thousands separator
+            # else: could be decimal like "80.64" → 80640? Check magnitude
+        elif ',' in s:
+            parts = s.split(',')
+            if len(parts) == 2 and len(parts[1]) == 3:
+                s = s.replace(',', '')  # thousands separator
+            else:
+                s = s.replace(',', '.')  # decimal
+        try:
+            v = float(s)
+            if v < 100:  # terlalu kecil, mungkin dalam ton
+                v = v * 1000
+            return int(v)
+        except:
+            return 0
+
+    def _normalize_surat_kuasa(self, h: dict) -> dict:
+        """
+        Post-processing untuk Surat Kuasa — format-agnostic normalization.
+        Pastikan semua field ter-normalize tanpa peduli format asal dokumen.
+        """
+        # Normalize tanggal
+        if h.get('tanggal'):
+            h['tanggal'] = self._normalize_tanggal(h['tanggal'])
+
+        # Normalize jumlah_kg
+        h['jumlah_kg'] = self._clean_kg_value(h.get('jumlah_kg', 0))
+
+        # Normalize jumlah_pallet
+        try:
+            pallet = h.get('jumlah_pallet', 0)
+            if isinstance(pallet, str):
+                # Extract first number from string like "80 PALLET" or "64"
+                m = re.search(r'(\d+)', str(pallet))
+                pallet = int(m.group(1)) if m else 0
+            h['jumlah_pallet'] = int(pallet) if pallet else 0
+        except:
+            h['jumlah_pallet'] = 0
+
+        # Ensure arrays are lists
+        if not isinstance(h.get('items'), list):
+            h['items'] = []
+
+        # Normalize items weights
+        for item in h.get('items', []):
+            if 'quantity_kg' in item:
+                item['quantity_kg'] = self._clean_kg_value(item.get('quantity_kg', 0))
+
+        # If jumlah_kg is 0 but we have items, calculate sum
+        if h['jumlah_kg'] == 0 and h.get('items'):
+            total = sum(item.get('quantity_kg', 0) for item in h['items'])
+            if total > 0:
+                h['jumlah_kg'] = total
+                logger.info(f"Surat Kuasa: calculated jumlah_kg={total} from {len(h['items'])} items")
+
+        # Ensure all expected keys exist (merge with empty template)
+        for key, default_val in EMPTY['surat_kuasa'].items():
+            if key not in h:
+                h[key] = default_val
+
+        return h
+
+    def _normalize_do_result(self, h: dict) -> dict:
+        """
+        Post-processing untuk DO/Sales Order — normalize dates, volumes.
+        """
+        # Normalize dates
+        for date_key in ['tanggal_so', 'tanggal_po', 'tanggal_kontrak']:
+            if h.get(date_key):
+                h[date_key] = self._normalize_tanggal(h[date_key])
+
+        # Normalize volume
+        h['volume'] = self._clean_kg_value(h.get('volume', 0))
+
+        # Ensure all expected keys exist
+        for key, default_val in EMPTY['do'].items():
+            if key not in h:
+                h[key] = default_val
+
+        return h
+
+    # ── blur detection ────────────────────────────────────────────────────────
+
     def _check_blur(self, img_bytes: bytes) -> dict:
         """Laplacian variance blur detection. Threshold diturunkan agar toleran foto tulisan tipis."""
         try:
@@ -960,8 +1164,8 @@ class OCREngine:
         CRITICAL = {
             "sir20":       ["no_surat", "tanggal", "no_kendaraan", "nama_supir", "baris"],
             "rss1":        ["no_dokumen", "tanggal", "kebun", "jumlah_bale", "nomor_bale"],
-            "do":          ["no_so_internal", "tanggal_so", "nama_pembeli", "volume"],
-            "surat_kuasa": ["no_surat_kuasa", "tanggal", "nama_pemberi", "jumlah_kg"],
+            "do":          ["no_so_internal", "tanggal_so", "nama_pembeli", "volume", "no_po"],
+            "surat_kuasa": ["perusahaan_pemberi", "jenis_karet", "jumlah_kg", "no_do"],
         }
         fields = CRITICAL.get(jenis, [])
         if not fields: return {"score": 100, "level": "high", "missing": []}
@@ -1068,14 +1272,16 @@ class OCREngine:
                 h = self._expand_urut(h)
 
             elif jenis == 'do':
-                img = self._prep(img_bytes, max_dim=1300)
-                h = self._call_staggered(self._b64(img, q=85), PROMPT_DO, MAX_TOKENS['do'])
+                img = self._prep(img_bytes, max_dim=1500)  # Higher res for printed docs
+                h = self._call_staggered(self._b64(img, q=88), PROMPT_DO, MAX_TOKENS['do'])
                 if not h: h = EMPTY['do'].copy()
+                h = self._normalize_do_result(h)
 
             elif jenis == 'surat_kuasa':
-                img = self._prep(img_bytes, max_dim=1400)
-                h = self._call_staggered(self._b64(img, q=85), PROMPT_SURAT_KUASA, MAX_TOKENS['surat_kuasa'])
+                img = self._prep(img_bytes, max_dim=1800)  # High res for diverse formats
+                h = self._call_staggered(self._b64(img, q=88), PROMPT_SURAT_KUASA, MAX_TOKENS['surat_kuasa'])
                 if not h: h = EMPTY['surat_kuasa'].copy()
+                h = self._normalize_surat_kuasa(h)
 
             else:
                 raise ValueError(f"Jenis tidak dikenal: {jenis}")

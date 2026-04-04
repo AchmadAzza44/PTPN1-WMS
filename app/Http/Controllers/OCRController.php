@@ -194,7 +194,7 @@ class OCRController extends Controller
      */
     private function sanitizeHasil(array $hasil): array
     {
-        $keepAsArray = ['baris', 'nomor_bale', 'nomor_urut_bale'];
+        $keepAsArray = ['baris', 'nomor_bale', 'nomor_urut_bale', 'items'];
         $dateKeys = ['tanggal', 'tanggal_so', 'tanggal_po', 'tanggal_kontrak'];
 
         foreach ($hasil as $key => $val) {

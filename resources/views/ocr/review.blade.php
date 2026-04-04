@@ -68,18 +68,23 @@
                 ['key' => 'deskripsi',            'label' => 'Deskripsi Produk',     'type' => 'text'],
             ],
             'surat_kuasa' => [
-                ['key' => 'no_surat_kuasa',     'label' => 'No. Surat Kuasa',    'type' => 'text'],
-                ['key' => 'tanggal',            'label' => 'Tanggal',            'type' => 'date'],
-                ['key' => 'nama_pemberi',       'label' => 'Nama Pemberi Kuasa', 'type' => 'text'],
-                ['key' => 'perusahaan_pemberi', 'label' => 'Perusahaan',         'type' => 'text'],
-                ['key' => 'nama_penerima',      'label' => 'Nama Penerima',      'type' => 'text'],
-                ['key' => 'no_do',              'label' => 'No. DO / Referensi', 'type' => 'text'],
-                ['key' => 'jenis_karet',        'label' => 'Jenis Karet',        'type' => 'text'],
-                ['key' => 'jumlah_kg',          'label' => 'Jumlah (kg)',        'type' => 'number'],
-                ['key' => 'jumlah_palet',       'label' => 'Jumlah Palet',       'type' => 'number'],
-                ['key' => 'tujuan',             'label' => 'Tujuan',             'type' => 'text'],
-                ['key' => 'trucking',           'label' => 'Trucking',           'type' => 'text'],
-                ['key' => 'stuffing',           'label' => 'Stuffing',           'type' => 'text'],
+                ['key' => 'no_surat_kuasa',     'label' => 'No. Surat / Referensi',  'type' => 'text'],
+                ['key' => 'tanggal',            'label' => 'Tanggal',                'type' => 'date'],
+                ['key' => 'perusahaan_pemberi', 'label' => 'Perusahaan Pemberi',     'type' => 'text'],
+                ['key' => 'nama_pemberi',       'label' => 'Nama Pemberi Kuasa',     'type' => 'text'],
+                ['key' => 'nama_penerima',      'label' => 'Nama Penerima Kuasa',    'type' => 'text'],
+                ['key' => 'no_do',              'label' => 'No. DO / PO',            'type' => 'text'],
+                ['key' => 'no_kontrak',         'label' => 'No. Kontrak',            'type' => 'text'],
+                ['key' => 'bl_invoice',         'label' => 'BL / Invoice',           'type' => 'text'],
+                ['key' => 'jenis_karet',        'label' => 'Jenis Karet',            'type' => 'text'],
+                ['key' => 'jumlah_kg',          'label' => 'Jumlah (kg)',            'type' => 'number'],
+                ['key' => 'jumlah_pallet',      'label' => 'Jumlah Palet',           'type' => 'number'],
+                ['key' => 'packing',            'label' => 'Packing',                'type' => 'text'],
+                ['key' => 'jasa_expedisi',      'label' => 'Jasa Expedisi / PIC',    'type' => 'text'],
+                ['key' => 'trucking',           'label' => 'Trucking',               'type' => 'text'],
+                ['key' => 'stuffing',           'label' => 'Stuffing',               'type' => 'text'],
+                ['key' => 'tujuan',             'label' => 'Tujuan Pengiriman',      'type' => 'text'],
+                ['key' => 'no_kendaraan',       'label' => 'No. Kendaraan',          'type' => 'text'],
             ],
         ];
         $fields = $fieldDefs[(string)$jenis] ?? [];
@@ -220,7 +225,7 @@
                                     : (string)$rawVal;
                             @endphp
                             <div
-                                style="{{ in_array($f['key'], ['no_surat', 'no_dokumen', 'no_so_internal', 'nama_pemberi', 'perusahaan_pemberi']) ? 'grid-column:1/-1;' : '' }}">
+                                style="{{ in_array($f['key'], ['no_surat', 'no_dokumen', 'no_so_internal', 'no_surat_kuasa', 'perusahaan_pemberi', 'alamat_pemberi', 'tujuan', 'jasa_expedisi', 'alamat_pembeli']) ? 'grid-column:1/-1;' : '' }}">
                                 <label
                                     style="display:block;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px;">
                                     {{ $f['label'] }}
@@ -360,6 +365,43 @@
                     @endif
                 @endif
 
+                {{-- ── Items Shipment (Surat Kuasa multi-item) ── --}}
+                @if($jenis === 'surat_kuasa' && !empty($hasil['items']))
+                    <div class="card-premium p-5 anim-fade-up" style="margin-bottom:16px;">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+                            <i data-lucide="package" style="width:13px;height:13px;color:var(--text-muted);"></i>
+                            <span style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;">Detail Shipment Items</span>
+                            <span style="margin-left:auto;display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:20px;background:{{ $hexAlpha }}0.1);color:{{ $hex }};font-size:10px;font-weight:700;">
+                                {{ count($hasil['items']) }} item
+                            </span>
+                        </div>
+                        <div style="overflow-x:auto;border-radius:9px;border:1px solid var(--border);">
+                            <table style="width:100%;min-width:520px;border-collapse:collapse;font-size:13px;">
+                                <thead>
+                                    <tr style="background:rgba(248,250,252,0.9);">
+                                        <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);">BL / No</th>
+                                        <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);">Grade</th>
+                                        <th style="padding:8px 10px;text-align:right;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);">Qty (kg)</th>
+                                        <th style="padding:8px 10px;text-align:right;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);">Pallet</th>
+                                        <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);">DO</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($hasil['items'] as $i => $item)
+                                    <tr style="border-bottom:1px solid var(--border);">
+                                        <td style="padding:6px 10px;font-size:12px;">{{ $item['bl_number'] ?? '-' }}</td>
+                                        <td style="padding:6px 10px;font-size:12px;">{{ $item['grade'] ?? '-' }}</td>
+                                        <td style="padding:6px 10px;font-size:12px;text-align:right;">{{ number_format($item['quantity_kg'] ?? 0) }}</td>
+                                        <td style="padding:6px 10px;font-size:12px;text-align:right;">{{ $item['pallet_count'] ?? '-' }}</td>
+                                        <td style="padding:6px 10px;font-size:12px;">{{ $item['do_number'] ?? '-' }}</td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                @endif
+
                 {{-- ── Tombol Aksi ── --}}
                 <div class="review-actions">
                     <a href="{{ route('ocr.index', ['type' => $type]) }}"
@@ -472,6 +514,7 @@
                                     params.append('documented_qty_kg', document.querySelector('[name="hasil[volume]"]')?.value || '');
                                 @elseif($jenis === 'surat_kuasa')
                                     params.append('do_number_manual', document.querySelector('[name="hasil[no_do]"]')?.value || '');
+                                    params.append('contract_number_ref', document.querySelector('[name="hasil[no_kontrak]"]')?.value || '');
                                     params.append('documented_qty_kg', document.querySelector('[name="hasil[jumlah_kg]"]')?.value || '');
                                 @endif
                                 window.location.href = "{{ route('shipments.create') }}?" + params.toString();
