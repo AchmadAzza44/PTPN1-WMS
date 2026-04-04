@@ -30,6 +30,8 @@ Route::get('/', function () {
 });
 
 Route::middleware(['auth'])->group(function () {
+    // Web Push Subscriptions
+    Route::post('/push-subscribe', [\App\Http\Controllers\PushSubscriptionController::class, 'store'])->name('push.subscribe');
 
     // ╔══════════════════════════════════════════════════════════╗
     // ║  SHARED: Semua role (admin, operator, manager)          ║

@@ -8,6 +8,9 @@ use App\Models\StockLot;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\User;
+use Illuminate\Support\Facades\Notification;
+use App\Notifications\ShipmentVerificationNotification;
 
 class ShipmentController extends Controller
 {
@@ -173,6 +176,12 @@ class ShipmentController extends Controller
             $po->save();
 
             DB::commit();
+
+            // Kirim Push Notification ke seluruh Petugas Gudang (operator)
+            $petugasGudang = User::where('role', 'operator')->get();
+            if ($petugasGudang->count() > 0) {
+                Notification::send($petugasGudang, new ShipmentVerificationNotification($shipment));
+            }
 
             return redirect()->route('shipments.show', $shipment->id)->with('success', 'Pengiriman parsial/penuh berhasil dibuat! Silakan lanjut ke verifikasi.');
 
