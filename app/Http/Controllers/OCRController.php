@@ -156,28 +156,42 @@ class OCRController extends Controller
         $fotoPath = null;
         $ocrJobId = $request->input('ocr_job_id');
 
-        // Copy foto dari temp → arsip permanen
-        if ($ocrJobId) {
-            $job = OcrJob::find($ocrJobId);
-            if ($job && $job->preview_path) {
-                $arsipPath = 'arsip/dokumen/' . now()->format('Y/m') . '/' . basename($job->preview_path);
-                Storage::disk('public')->copy($job->preview_path, $arsipPath);
-                // Hapus file temp setelah dicopy
-                Storage::disk('public')->delete($job->preview_path);
-                $job->update(['preview_path' => $arsipPath]);
-                $fotoPath = $arsipPath;
+        // Copy foto dari temp → arsip permanen (wrap in try-catch for ephemeral hosting)
+        try {
+            if ($ocrJobId) {
+                $job = OcrJob::find($ocrJobId);
+                if ($job && $job->preview_path) {
+                    if (Storage::disk('public')->exists($job->preview_path)) {
+                        $arsipPath = 'arsip/dokumen/' . now()->format('Y/m') . '/' . basename($job->preview_path);
+                        Storage::disk('public')->copy($job->preview_path, $arsipPath);
+                        Storage::disk('public')->delete($job->preview_path);
+                        $job->update(['preview_path' => $arsipPath]);
+                        $fotoPath = $arsipPath;
+                    } else {
+                        // File sudah hilang (ephemeral hosting), pakai path lama
+                        $fotoPath = $job->preview_path;
+                    }
+                }
+            } elseif ($request->hasFile('foto')) {
+                $fotoPath = $request->file('foto')->store('arsip/dokumen/' . now()->format('Y/m'), 'public');
             }
-        } elseif ($request->hasFile('foto')) {
-            $fotoPath = $request->file('foto')->store('arsip/dokumen/' . now()->format('Y/m'), 'public');
+        } catch (\Exception $e) {
+            Log::warning('OCR simpan foto error (non-fatal): ' . $e->getMessage());
+            // Lanjutkan tanpa foto, jangan gagalkan seluruh proses simpan
         }
 
-        $saved = match ($jenis) {
-            'sir20' => $this->saveSir20($hasil, $fotoPath),
-            'rss1' => $this->saveRss1($hasil, $fotoPath),
-            'do' => $this->saveDo($hasil, $fotoPath),
-            'surat_kuasa' => $this->saveSuratKuasa($hasil, $fotoPath),
-            default => null,
-        };
+        try {
+            $saved = match ($jenis) {
+                'sir20' => $this->saveSir20($hasil, $fotoPath),
+                'rss1' => $this->saveRss1($hasil, $fotoPath),
+                'do' => $this->saveDo($hasil, $fotoPath),
+                'surat_kuasa' => $this->saveSuratKuasa($hasil, $fotoPath),
+                default => null,
+            };
+        } catch (\Exception $e) {
+            Log::error('OCR simpan Error: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+            return response()->json(['success' => false, 'message' => 'Gagal simpan: ' . $e->getMessage()], 500);
+        }
 
         if (!$saved) {
             return response()->json(['success' => false, 'message' => 'Gagal simpan'], 500);
@@ -280,6 +294,10 @@ class OCRController extends Controller
         DB::beginTransaction();
         try {
             $ticketNumber = $data['no_surat'] ?? 'SIR20-' . time();
+            // Pastikan ticket_number unik (tambah suffix timestamp jika sudah ada)
+            if (InboundTransaction::where('ticket_number', $ticketNumber)->exists()) {
+                $ticketNumber .= '-' . now()->format('His');
+            }
             $totalKg = $data['total_kg'] ?? 0;
             $baris = $data['baris'] ?? [];
 
@@ -296,7 +314,7 @@ class OCRController extends Controller
 
                 StockDetail::create([
                     'stock_lot_id' => $stockLot->id,
-                    'packaging_type' => 'Pallet',
+                    'packaging_type' => 'pallet',
                     'fdf_number' => $ticketNumber,
                     'bale_range' => '-',
                     'quantity_unit' => $data['total_bale'] ?? floor($totalKg / 35),
@@ -333,7 +351,7 @@ class OCRController extends Controller
 
                     StockDetail::create([
                         'stock_lot_id' => $stockLot->id,
-                        'packaging_type' => 'Pallet',
+                        'packaging_type' => 'pallet',
                         'fdf_number' => $b['no_peti'] ?? $ticketNumber,
                         'bale_range' => '-',
                         'quantity_unit' => $b['jml_bale'] ?? 0,
@@ -362,8 +380,8 @@ class OCRController extends Controller
             return 1;
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error("OCR saveSir20 Error: " . $e->getMessage());
-            return null;
+            Log::error("OCR saveSir20 Error: " . $e->getMessage() . "\n" . $e->getTraceAsString());
+            throw $e;
         }
     }
 
@@ -372,9 +390,31 @@ class OCRController extends Controller
         DB::beginTransaction();
         try {
             $ticketNumber = $data['no_dokumen'] ?? 'RSS1-' . time();
+            // Pastikan ticket_number unik
+            if (InboundTransaction::where('ticket_number', $ticketNumber)->exists()) {
+                $ticketNumber .= '-' . now()->format('His');
+            }
             $jumlahBale = $data['jumlah_bale'] ?? 0;
             $totalKg = $jumlahBale > 0 ? ($jumlahBale * 113) : ($data['berat_netto_total'] ?? 0);
-            $mutu = $data['mutu'] ?? 'RSS 1';
+            $mutuRaw = $data['mutu'] ?? 'RSS 1';
+            // Normalisasi mutu agar cocok dengan enum DB: 'SIR 20 SW', 'RSS 1', 'RSS 2', 'Cutting A', 'Cutting B'
+            $validMutu = ['SIR 20 SW', 'RSS 1', 'RSS 2', 'Cutting A', 'Cutting B'];
+            $mutu = 'RSS 1'; // default
+            foreach ($validMutu as $vm) {
+                if (strcasecmp(trim($mutuRaw), $vm) === 0) {
+                    $mutu = $vm;
+                    break;
+                }
+            }
+            // Fallback: cek pola umum seperti "RSS-1", "RSS1", "rss 2"
+            if ($mutu === 'RSS 1' && $mutuRaw !== 'RSS 1') {
+                $normalized = strtoupper(preg_replace('/[^a-zA-Z0-9]/', '', $mutuRaw));
+                if (str_contains($normalized, 'RSS2')) $mutu = 'RSS 2';
+                elseif (str_contains($normalized, 'SIR')) $mutu = 'SIR 20 SW';
+                elseif (str_contains($normalized, 'CUTTING')) {
+                    $mutu = str_contains($normalized, 'B') ? 'Cutting B' : 'Cutting A';
+                }
+            }
 
             $lotNumber = 'LOT-' . date('ymd') . '-' . rand(1000, 9999);
             $stockLot = StockLot::create([
@@ -388,7 +428,7 @@ class OCRController extends Controller
 
             StockDetail::create([
                 'stock_lot_id' => $stockLot->id,
-                'packaging_type' => 'Bale',
+                'packaging_type' => 'bale',
                 'fdf_number' => $ticketNumber,
                 'bale_range' => $data['nomor_bale'] ?? '-',
                 'quantity_unit' => $data['jumlah_bale'] ?? 0,
@@ -413,8 +453,8 @@ class OCRController extends Controller
             return 1;
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error("OCR saveRss1 Error: " . $e->getMessage());
-            return null;
+            Log::error("OCR saveRss1 Error: " . $e->getMessage() . "\n" . $e->getTraceAsString());
+            throw $e;
         }
     }
 

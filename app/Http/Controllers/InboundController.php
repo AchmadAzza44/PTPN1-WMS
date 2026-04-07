@@ -67,7 +67,7 @@ class InboundController extends Controller
                         $weightInput = $item['weight'] ?? 0;
                         StockDetail::create([
                             'stock_lot_id' => $stockLot->id,
-                            'packaging_type' => $isRss ? 'Bale' : 'Pallet',
+                            'packaging_type' => $isRss ? 'bale' : 'pallet',
                             'fdf_number' => $item['fdf_number'] ?? $request->ticket_number,
                             'bale_range' => '-',
                             'quantity_unit' => $isRss ? $weightInput : floor($weightInput / 35),
@@ -114,7 +114,7 @@ class InboundController extends Controller
 
                 StockDetail::create([
                     'stock_lot_id' => $stockLot->id,
-                    'packaging_type' => $originUnit === 'RSS' ? 'Bale' : 'Pallet',
+                    'packaging_type' => $originUnit === 'RSS' ? 'bale' : 'pallet',
                     'fdf_number' => $request->ticket_number,
                     'bale_range' => '-',
                     'quantity_unit' => $originUnit === 'RSS' ? $request->net_weight : floor($request->net_weight / 35),

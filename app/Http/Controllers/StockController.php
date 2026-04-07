@@ -53,7 +53,7 @@ class StockController extends Controller
         // Auto Create Detail
         \App\Models\StockDetail::create([
             'stock_lot_id' => $stockLot->id,
-            'packaging_type' => $isRss ? 'Bale' : 'Pallet',
+            'packaging_type' => $isRss ? 'bale' : 'pallet',
             'fdf_number' => 'MANUAL-INPUT',
             'bale_range' => 'ALL',
             'quantity_unit' => $isRss ? $request->net_weight : floor($request->net_weight / 35),
@@ -94,7 +94,7 @@ class StockController extends Controller
             $stock->details()->delete();
             \App\Models\StockDetail::create([
                 'stock_lot_id' => $stock->id,
-                'packaging_type' => $isRss ? 'Bale' : 'Pallet',
+                'packaging_type' => $isRss ? 'bale' : 'pallet',
                 'fdf_number' => 'MANUAL-EDIT',
                 'bale_range' => 'ADJUSTMENT',
                 'quantity_unit' => $isRss ? $request->net_weight : floor($request->net_weight / 35),
