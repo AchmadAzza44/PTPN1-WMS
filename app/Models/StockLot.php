@@ -15,6 +15,11 @@ class StockLot extends Model
         return $this->hasMany(StockDetail::class);
     }
 
+    public function edits(): HasMany
+    {
+        return $this->hasMany(StockLotEdit::class);
+    }
+
     /**
      * Mengurangi stok dari lot ini sebanyak $amountKg.
      * Mengembalikan array detail pengurangan (untuk tracking history jika perlu).

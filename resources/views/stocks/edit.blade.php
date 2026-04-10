@@ -16,13 +16,23 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
-                        <label for="lot_number"
+                        <label for="lot_number_display"
                             style="display: block; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">Nomor
                             Lot</label>
-                        <input type="text" name="lot_number" id="lot_number"
-                            style="width: 100%; padding: 10px 16px; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc; color: #94a3b8; cursor: not-allowed; font-family: monospace; text-transform: uppercase; font-size: 13px;"
-                            value="{{ old('lot_number', $stock->lot_number) }}" readonly>
-                        <p style="font-size: 12px; color: #94a3b8; margin-top: 4px;">Nomor Lot tidak dapat diubah.</p>
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <input type="text" id="lot_number_display"
+                                style="flex:1; padding: 10px 16px; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc; color: #94a3b8; cursor: not-allowed; font-family: monospace; text-transform: uppercase; font-size: 13px;"
+                                value="{{ $stock->lot_number }}" readonly>
+                            @if($stock->status === 'blue')
+                            <button type="button" onclick="document.getElementById('lotEditSection').style.display=document.getElementById('lotEditSection').style.display==='none'?'block':'none'"
+                                style="padding:8px 14px;border-radius:10px;border:1px solid rgba(245,166,35,0.3);background:rgba(245,166,35,0.08);color:#F5A623;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:5px;">
+                                <i data-lucide="pencil" style="width:12px;height:12px;"></i> Edit
+                            </button>
+                            @endif
+                        </div>
+                        @if($stock->status !== 'blue')
+                        <p style="font-size: 12px; color: #94a3b8; margin-top: 4px;">Lot sudah keluar gudang — tidak bisa diubah.</p>
+                        @endif
                     </div>
                     <div>
                         <label for="status"
@@ -112,5 +122,56 @@
                 </button>
             </div>
         </form>
+
+        {{-- ═══ Lot Number Edit Section (separate form, audit trail) ═══ --}}
+        @if($stock->status === 'blue')
+        <div id="lotEditSection" style="display:none;margin-top:20px;">
+            <form action="{{ route('stocks.update_lot', $stock->id) }}" method="POST">
+                @csrf
+                @method('PUT')
+                <div class="glass p-6 rounded-2xl" style="border:2px solid rgba(245,166,35,0.3);background:rgba(245,166,35,0.03);">
+                    <h4 style="font-size:14px;font-weight:700;color:#1e293b;margin:0 0 14px 0;display:flex;align-items:center;gap:8px;">
+                        <div style="width:28px;height:28px;border-radius:8px;background:rgba(245,166,35,0.1);display:flex;align-items:center;justify-content:center;">
+                            <i data-lucide="edit-3" style="width:14px;height:14px;color:#F5A623;"></i>
+                        </div>
+                        Koreksi Nomor Lot
+                    </h4>
+
+                    <div style="display:grid;gap:14px;">
+                        <div>
+                            <label style="display:block;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">Nomor Lot Baru</label>
+                            <input type="text" name="lot_number" required
+                                style="width:100%;padding:10px 16px;border:1.5px solid #e2e8f0;border-radius:12px;font-family:monospace;font-size:14px;text-transform:uppercase;font-weight:700;outline:none;transition:border-color 0.2s;box-sizing:border-box;"
+                                onfocus="this.style.borderColor='#F5A623'" onblur="this.style.borderColor='#e2e8f0'"
+                                value="{{ old('lot_number', $stock->lot_number) }}"
+                                placeholder="Masukkan nomor lot yang benar">
+                        </div>
+                        <div>
+                            <label style="display:block;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">
+                                Alasan Koreksi <span style="color:#ef4444;">*</span>
+                            </label>
+                            <textarea name="reason" required minlength="5" rows="2"
+                                style="width:100%;padding:10px 16px;border:1.5px solid #e2e8f0;border-radius:12px;font-size:13px;resize:vertical;outline:none;transition:border-color 0.2s;box-sizing:border-box;"
+                                onfocus="this.style.borderColor='#F5A623'" onblur="this.style.borderColor='#e2e8f0'"
+                                placeholder="Contoh: Salah input dari OCR, seharusnya 136 bukan 130">{{ old('reason') }}</textarea>
+                            <p style="font-size:10px;color:#94a3b8;margin:4px 0 0 0;">Minimal 5 karakter. Alasan akan tercatat di audit trail.</p>
+                        </div>
+                    </div>
+
+                    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;padding-top:12px;border-top:1px solid rgba(245,166,35,0.15);">
+                        <button type="button" onclick="document.getElementById('lotEditSection').style.display='none'"
+                            style="padding:8px 16px;border-radius:10px;border:1px solid #e2e8f0;background:white;color:#64748b;font-size:12px;font-weight:600;cursor:pointer;">
+                            Batal
+                        </button>
+                        <button type="submit"
+                            style="padding:8px 18px;border-radius:10px;border:none;background:linear-gradient(135deg,#F5A623,#e8951e);color:white;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(245,166,35,0.3);">
+                            <i data-lucide="check" style="width:14px;height:14px;"></i>
+                            Simpan Perubahan Lot
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+        @endif
     </div>
 </x-layout>

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 
 use App\Models\StockLot;
+use App\Models\StockLotEdit;
 
 class StockController extends Controller
 {
@@ -103,6 +104,48 @@ class StockController extends Controller
         }
 
         return redirect()->route('stocks.index')->with('success', 'Data stok berhasil diperbarui.');
+    }
+
+    /**
+     * Update Lot Number — Operator-only, audit trail mandatory.
+     * Hanya boleh untuk lot yang masih di gudang (status=blue).
+     */
+    public function updateLotNumber(Request $request, $id)
+    {
+        $stock = StockLot::findOrFail($id);
+
+        $request->validate([
+            'lot_number' => 'required|string|max:100',
+            'reason'     => 'required|string|min:5|max:255',
+        ]);
+
+        // Hanya boleh edit jika status masih 'blue' (di gudang)
+        if ($stock->status !== 'blue') {
+            return back()->with('error', 'Lot yang sudah keluar gudang (status: ' . $stock->status . ') tidak bisa diubah nomor lot-nya.');
+        }
+
+        $oldLotNumber = $stock->lot_number;
+        $newLotNumber = strtoupper(trim($request->lot_number));
+
+        // Skip jika tidak berubah
+        if ($oldLotNumber === $newLotNumber) {
+            return back()->with('info', 'Nomor lot tidak berubah.');
+        }
+
+        // Simpan audit trail
+        StockLotEdit::create([
+            'stock_lot_id'  => $stock->id,
+            'user_id'       => auth()->id(),
+            'field_changed' => 'lot_number',
+            'old_value'     => $oldLotNumber,
+            'new_value'     => $newLotNumber,
+            'reason'        => $request->reason,
+        ]);
+
+        // Update lot number
+        $stock->update(['lot_number' => $newLotNumber]);
+
+        return back()->with('success', "Nomor Lot berhasil diubah: {$oldLotNumber} → {$newLotNumber}");
     }
 
     public function destroy($id)

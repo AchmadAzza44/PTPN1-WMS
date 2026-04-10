@@ -99,22 +99,87 @@
     @endphp
 
     <style>
+        /* ═══ DESKTOP LAYOUT ═══ */
         .review-main-grid {
             display: grid;
             grid-template-columns: {{ $imageUrl ? '2fr 3fr' : '1fr' }};
             gap: 24px;
             align-items: start;
         }
-        /* min-width:0 mencegah grid item melebar melebihi track-nya */
         .review-main-grid > * { min-width: 0; }
         .review-left-col { display: flex; flex-direction: column; gap: 16px; position: sticky; top: 24px; }
         .review-fields-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .review-actions { display: flex; gap: 10px; justify-content: flex-end; }
 
+        /* ═══ MOBILE: Sticky Photo Header + Scrollable Form ═══ */
         @media (max-width: 768px) {
-            .review-main-grid { grid-template-columns: 1fr !important; }
-            .review-left-col { position: static; }
-            .review-right-col { order: 1; }
+            .review-main-grid { display: flex !important; flex-direction: column !important; gap: 0 !important; }
+
+            /* Sticky photo header */
+            .review-left-col {
+                position: sticky !important;
+                top: 0;
+                z-index: 50;
+                background: var(--bg-primary, #fff);
+                padding: 10px 0 6px 0;
+                border-bottom: 1px solid var(--border, #e2e8f0);
+                box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+                gap: 0 !important;
+                transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+            }
+            .review-left-col.collapsed {
+                padding: 0;
+            }
+            .review-left-col .card-premium { margin: 0 !important; border-radius: 0 !important; border-top: none !important; }
+            .review-left-col .doc-info-bar { display: none; }
+            .review-left-col .error-bar-desktop { display: none; }
+
+            /* Photo container mobile */
+            .mobile-photo-wrap {
+                max-height: 35vh;
+                overflow: hidden;
+                transition: max-height 0.35s cubic-bezier(0.4,0,0.2,1);
+                position: relative;
+            }
+            .mobile-photo-wrap.collapsed { max-height: 0; }
+            .mobile-photo-wrap img { max-height: 35vh !important; object-fit: contain; }
+
+            /* Mini preview bar when collapsed */
+            .mobile-mini-bar {
+                display: none;
+                align-items: center;
+                gap: 10px;
+                padding: 8px 14px;
+                background: rgba(248,250,252,0.95);
+                backdrop-filter: blur(8px);
+                border-bottom: 1px solid var(--border, #e2e8f0);
+                cursor: pointer;
+            }
+            .mobile-mini-bar.visible { display: flex; }
+            .mobile-mini-bar img { width: 48px; height: 48px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border, #e2e8f0); }
+
+            /* Toggle collapse button */
+            .mobile-collapse-btn {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+                width: 100%;
+                padding: 6px 0;
+                border: none;
+                background: rgba(248,250,252,0.8);
+                color: var(--text-muted, #94a3b8);
+                font-size: 11px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: background 0.2s;
+            }
+            .mobile-collapse-btn:active { background: rgba(226,232,240,0.6); }
+            .mobile-collapse-btn i { transition: transform 0.35s; }
+            .mobile-collapse-btn.flipped i { transform: rotate(180deg); }
+
+            /* Form scrolls below */
+            .review-right-col { order: 2; padding-top: 12px; }
             .review-fields-grid { grid-template-columns: 1fr !important; }
             .review-fields-grid > div { grid-column: auto !important; }
             .review-actions { flex-direction: column-reverse; gap: 8px; }
@@ -123,22 +188,89 @@
                 justify-content: center !important;
             }
         }
+
+        /* Floating photo toggle (mobile only) */
+        .fab-photo-toggle {
+            display: none;
+            position: fixed;
+            bottom: 24px;
+            right: 20px;
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            background: {{ $hex }};
+            color: white;
+            border: none;
+            box-shadow: 0 4px 16px {{ $hexAlpha }}0.35);
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 99;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .fab-photo-toggle:active { transform: scale(0.92); }
+        @media (max-width: 768px) {
+            .fab-photo-toggle { display: flex; }
+        }
+
+        /* ═══ Zoom overlay ═══ */
+        .zoom-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 200;
+            background: rgba(15,23,42,0.85);
+            backdrop-filter: blur(4px);
+            align-items: center;
+            justify-content: center;
+            cursor: zoom-out;
+        }
+        .zoom-overlay.active { display: flex; }
+        .zoom-overlay img {
+            max-width: 95vw;
+            max-height: 92vh;
+            object-fit: contain;
+            border-radius: 12px;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+        }
+
+        /* Desktop hides mobile-only elements */
+        @media (min-width: 769px) {
+            .mobile-collapse-btn { display: none !important; }
+            .mobile-mini-bar { display: none !important; }
+        }
     </style>
+    {{-- ═══ ZOOM OVERLAY (fullscreen photo viewer) ═══ --}}
+    @if($imageUrl)
+    <div class="zoom-overlay" id="zoomOverlay" onclick="closeZoom()">
+        <img src="{{ $imageUrl }}" alt="Dokumen Zoom">
+    </div>
+    @endif
+
     <div class="review-main-grid">
 
         {{-- ═══ KOLOM KIRI: Foto Dokumen ═══ --}}
         @if($imageUrl)
-            <div class="review-left-col">
+            <div class="review-left-col" id="photoCol">
 
-                {{-- alert error kalau ada --}}
+                {{-- Error alert (desktop) --}}
                 @if(!empty($error))
-                    <div
+                    <div class="error-bar-desktop"
                         style="padding:12px 14px;border-radius:10px;background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.2);display:flex;align-items:flex-start;gap:8px;">
                         <i data-lucide="alert-triangle"
                             style="width:14px;height:14px;color:#ef4444;flex-shrink:0;margin-top:1px;"></i>
                         <p style="font-size:12px;color:#ef4444;margin:0;">{{ $error }}</p>
                     </div>
                 @endif
+
+                {{-- Mini preview bar (mobile collapsed state) --}}
+                <div class="mobile-mini-bar" id="miniBar" onclick="togglePhoto()">
+                    <img src="{{ $imageUrl }}" alt="Preview">
+                    <div style="flex:1;">
+                        <p style="font-size:11px;font-weight:700;color:var(--text-primary);margin:0;">{{ $jenisLabel[$jenis] ?? strtoupper($jenis) }}</p>
+                        <p style="font-size:10px;color:var(--text-muted);margin:1px 0 0 0;">Tap untuk buka foto</p>
+                    </div>
+                    <i data-lucide="chevron-down" style="width:16px;height:16px;color:var(--text-muted);"></i>
+                </div>
 
                 <div class="card-premium p-4" style="border-top:3px solid #4AADE4;">
                     <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
@@ -150,18 +282,21 @@
                             <span style="margin-left:auto;font-size:10px;color:var(--text-muted);">⏱ {{ $waktu_s }}s</span>
                         @endif
                     </div>
-                    <div style="border-radius:10px;overflow:hidden;border:1px solid var(--border);background:#f8fafc;">
-                        <img src="{{ $imageUrl }}" alt="Dokumen"
-                            style="width:100%;height:auto;object-fit:contain;max-height:520px;display:block;"
-                            onclick="this.style.maxHeight=this.style.maxHeight==='none'?'520px':'none';this.style.cursor='zoom-out';"
-                            style="cursor:zoom-in;">
+                    <div class="mobile-photo-wrap" id="photoWrap" style="border-radius:10px;overflow:hidden;border:1px solid var(--border);background:#f8fafc;cursor:zoom-in;" onclick="openZoom()">
+                        <img src="{{ $imageUrl }}" alt="Dokumen" id="docPhoto"
+                            style="width:100%;height:auto;object-fit:contain;max-height:520px;display:block;">
                     </div>
-                    <p style="font-size:10px;color:var(--text-muted);margin:8px 0 0 0;text-align:center;">Klik gambar untuk zoom
-                    </p>
+                    <p style="font-size:10px;color:var(--text-muted);margin:6px 0 0 0;text-align:center;">Tap foto untuk zoom penuh</p>
+
+                    {{-- Collapse/expand toggle (mobile only) --}}
+                    <button type="button" class="mobile-collapse-btn" id="collapseBtn" onclick="togglePhoto()">
+                        <i data-lucide="chevron-up" style="width:14px;height:14px;"></i>
+                        <span id="collapseBtnText">Sembunyikan Foto</span>
+                    </button>
                 </div>
 
-                {{-- Info jenis dokumen --}}
-                <div
+                {{-- Info jenis dokumen (desktop only) --}}
+                <div class="doc-info-bar"
                     style="padding:12px 14px;border-radius:10px;background:{{ $hexAlpha }}0.06);border:1px solid {{ $hexAlpha }}0.2);">
                     <div style="display:flex;align-items:center;gap:8px;">
                         <div
@@ -440,7 +575,51 @@
         }
     </style>
 
+    {{-- ═══ Floating Photo Toggle (mobile only) ═══ --}}
+    @if($imageUrl)
+    <button type="button" class="fab-photo-toggle" id="fabPhoto" onclick="togglePhoto()" title="Lihat foto dokumen">
+        <i data-lucide="camera" style="width:22px;height:22px;"></i>
+    </button>
+    @endif
+
     <script>
+        // ── Mobile photo toggle ──────────────────────────
+        let photoCollapsed = false;
+        function togglePhoto() {
+            const wrap = document.getElementById('photoWrap');
+            const miniBar = document.getElementById('miniBar');
+            const btn = document.getElementById('collapseBtn');
+            const btnText = document.getElementById('collapseBtnText');
+            if (!wrap) return;
+
+            photoCollapsed = !photoCollapsed;
+            if (photoCollapsed) {
+                wrap.classList.add('collapsed');
+                miniBar && miniBar.classList.add('visible');
+                btn && btn.classList.add('flipped');
+                if (btnText) btnText.textContent = 'Tampilkan Foto';
+            } else {
+                wrap.classList.remove('collapsed');
+                miniBar && miniBar.classList.remove('visible');
+                btn && btn.classList.remove('flipped');
+                if (btnText) btnText.textContent = 'Sembunyikan Foto';
+                // Scroll ke atas agar foto terlihat
+                document.getElementById('photoCol')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+        // ── Fullscreen zoom overlay ──────────────────────
+        function openZoom() {
+            const overlay = document.getElementById('zoomOverlay');
+            if (overlay) overlay.classList.add('active');
+        }
+        function closeZoom() {
+            const overlay = document.getElementById('zoomOverlay');
+            if (overlay) overlay.classList.remove('active');
+        }
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeZoom(); });
+
+        // ── Table row management ─────────────────────────
         let barisIdx = {{ count($baris) }};
 
         function tambahBaris() {

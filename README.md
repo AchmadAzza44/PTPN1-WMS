@@ -1,226 +1,150 @@
-# WMS OCR System — Dokumentasi Lengkap
+# PTPN1 Warehouse Management System (WMS) & LLM OCR
 
-## Struktur Proyek
+Modern Warehouse Management System (WMS) yang dibangun khusus untuk PTPN1. Dilengkapi dengan microservice AI OCR berbasis LLM untuk ekstraksi data dokumen pengiriman secara otomatis, sistem antrian (queue) yang efisien, dan notifikasi Web Push (VAPID) realtime ke perangkat Android staf gudang.
 
-```
-wms-ocr/
-├── preprocessing/
-│   └── image_processor.py      ← Preprocessing gambar (shadow, perspektif, CLAHE)
-├── ocr_service/
-│   ├── ocr_engine.py           ← Hybrid OCR: PaddleOCR + TrOCR
-│   └── classifier.py           ← Identifikasi jenis dokumen otomatis
-├── extractors/
-│   ├── surat_pengantar_sir20.py ← Ekstraksi field SIR20
-│   ├── surat_pengantar_rss1.py  ← Ekstraksi field RSS1
-│   └── other_documents.py       ← Nota Timbang, DO, Surat Kuasa, Jaminan Mutu
-├── validators/
-│   └── document_validator.py    ← Validasi business rules
-├── utils/
-│   └── text_normalizer.py       ← Normalisasi angka, tanggal, plat
-├── api/
-│   └── main.py                  ← FastAPI service
-├── laravel/
-│   ├── OcrService.php           ← Client PHP untuk Laravel
-│   └── InboundOcrController.php ← Controller dengan OCR integration
-└── requirements.txt
+## 🚀 Fitur Utama
+
+- **Inbound & Outbound Management**: Lacak status penerimaan dan pengeluaran barang di gudang.
+- **Smart LLM OCR (Multi-Pass)**: Ekstraksi otomatis dari foto dokumen ke field form (didukung model LLM via Groq API). Mendukung format dokumen:
+  - Surat Pengantar SIR20
+  - Surat Pengantar RSS1
+  - Delivery Order (DO)
+  - Surat Kuasa
+- **Web Push Notifications**: Notifikasi verifikasi pengiriman real-time kepada staf gudang di mobile/Android.
+- **Human-in-the-loop Verification**: Integrasi cerdas di mana hasil OCR disetujui / direvisi staf sebelum masuk DB.
+- **Reporting & Export**: Dukungan cetak PDF (via DOMPDF) dan ekspor Excel.
+
+## 🛠️ Tech Stack
+
+### Web Application (Monolith)
+- **Framework**: Laravel 12 (PHP 8.2+)
+- **Frontend**: Blade + TailwindCSS (Vite)
+- **Database**: MySQL/MariaDB
+- **Ekstraksi/Librari Tambahan**: DomPDF, Maatwebsite Excel, WebPush
+
+### OCR Microservice
+- **Framework**: Python FastAPI
+- **Engine**: Groq LLM API (Multi-pass extraction)
+- **Image Processing**: OpenCV, Pillow
+
+---
+
+## 📁 Struktur Proyek (Ringkasan)
+
+```text
+PTPN1-WMS/
+├── app/                  # Logic utama backend Laravel (Controllers, Services)
+│   └── Services/         # OcrService.php, AIService.php, Notification, dsb
+├── CORO/                 # Python OCR Microservice
+│   ├── main.py           # FastAPI Server
+│   ├── ocr_service/      # Logic pemrosesan gambar & klasifikasi AI
+│   └── requirements.txt  # Dependencies Python
+├── resources/            # Views (Blade), CSS, JS
+├── routes/               # Routes Laravel
+└── start-all.bat         # Script cepat untuk menjalankan service (Windows)
 ```
 
 ---
 
-## Cara Instalasi
+## 💻 Cara Instalasi & Menjalankan
 
-### 1. Setup Python Environment
+### Persiapan
+Pastikan environment Anda sudah memiliki:
+- PHP >= 8.2
+- Composer
+- Node.js & NPM
+- Python >= 3.9
+- MySQL / MariaDB
 
+### 1. Setup Laravel Server
 ```bash
-# Buat virtual environment
-python -m venv venv
-source venv/bin/activate          # Linux/Mac
-venv\Scripts\activate             # Windows
+# Clone repo & masuk folder
+git clone <url-repo-anda>
+cd PTPN1-WMS
 
-# Install dependencies
+# Install dependensi PHP
+composer install
+
+# Copy .env configuration
+cp .env.example .env
+php artisan key:generate
+
+# Konfigurasi Database di .env (Sesuaikan nama DB, user, password)
+# DB_DATABASE=ptpn1_wms
+
+# Jalankan migrasi database
+php artisan migrate
+
+# Install & Build frontend assets
+npm install
+npm run build
+```
+
+### 2. Setup Python OCR Microservice
+```bash
+# Pindah ke folder microservice
+cd CORO
+
+# Buat virtual environment (opsional namun direkomendasikan)
+python -m venv venv
+# Aktifkan (Windows)
+venv\Scripts\activate
+# Aktifkan (Mac/Linux)
+# source venv/bin/activate
+
+# Install dependensi
 pip install -r requirements.txt
 
-# Jika ada error numpy/paddle conflict:
-pip install paddlepaddle --break-system-packages
-pip install paddleocr --break-system-packages
-pip install transformers torch --break-system-packages
+# Copy configurasi microservice
+cp .env.example .env
+
+# **PENTING**: Masukkan GROQ_API_KEY di file CORO/.env
 ```
 
-### 2. Download TrOCR Model (sekali saja, ~340MB)
+### 3. Menjalankan Seluruh Service
+Aplikasi membutuhkan 3 service yang berjalan bersamaan: Laravel Web Server, Laravel Queue Worker, dan Python OCR Server.
 
-Model akan otomatis didownload saat pertama kali dijalankan dan
-disimpan di `./models/trocr-handwritten/` untuk offline berikutnya.
+#### Opsi 1: Menggunakan Script (Windows)
+Cukup jalankan file batch yang sudah disediakan dari CMD di direktori utama:
+```cmd
+start-all.bat
+```
+Script tersebut akan otomatis membuka terminal terpisah untuk masing-masing service di port yang tepat (`8000` untuk Laravel, `8001` untuk OCR API).
 
-Atau download manual:
+#### Opsi 2: Manual (Semua OS)
+Buka 3 terminal terpisah:
+
+**Terminal 1 (Laravel Server):**
 ```bash
-python -c "
-from transformers import TrOCRProcessor, VisionEncoderDecoderModel
-TrOCRProcessor.from_pretrained('microsoft/trocr-base-handwritten').save_pretrained('./models/trocr-handwritten')
-VisionEncoderDecoderModel.from_pretrained('microsoft/trocr-base-handwritten').save_pretrained('./models/trocr-handwritten')
-print('Model saved!')
-"
+php artisan serve --port=8000
 ```
-
-### 3. Jalankan OCR Service
-
+**Terminal 2 (Laravel Queue):**
 ```bash
-cd wms-ocr
-python api/main.py
-# Atau dengan uvicorn langsung:
-uvicorn api.main:app --host 0.0.0.0 --port 8001 --workers 1
+php artisan queue:work --sleep=3 --tries=2 --timeout=150
+```
+**Terminal 3 (FastAPI OCR):**
+```bash
+cd CORO
+uvicorn main:app --host 0.0.0.0 --port 8001
 ```
 
-Service berjalan di: http://localhost:8001
-Dokumentasi API: http://localhost:8001/docs
-
-### 4. Konfigurasi Laravel
-
-Tambahkan ke `.env`:
-```
-OCR_SERVICE_URL=http://localhost:8001
-OCR_SERVICE_TIMEOUT=30
-```
-
-Tambahkan ke `config/services.php`:
-```php
-'ocr' => [
-    'url'     => env('OCR_SERVICE_URL', 'http://localhost:8001'),
-    'timeout' => env('OCR_SERVICE_TIMEOUT', 30),
-],
-```
-
-Tambahkan ke `app/Providers/AppServiceProvider.php`:
-```php
-$this->app->singleton(\App\Services\OcrService::class);
-```
-
-Route di `routes/api.php`:
-```php
-Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/inbound/scan',  [InboundOcrController::class, 'scanDocument']);
-    Route::post('/inbound/save',  [InboundOcrController::class, 'saveInbound']);
-});
-```
+Akses sistem Utama di: `http://localhost:8000`
+Akses API OCR (Internal) di: `http://localhost:8001/docs`
 
 ---
 
-## Alur Kerja Sistem
+## 🔄 Alur Integrasi OCR (Inbound)
 
-```
-Petugas Gudang
-     │
-     │ 1. Foto dokumen di aplikasi Android/PWA
-     ▼
-Laravel API
-     │
-     │ 2. Forward ke OCR Service
-     ▼
-Python FastAPI (OCR Service)
-     │
-     ├─ Preprocessing (shadow removal, deskew, CLAHE)
-     ├─ PaddleOCR → teks cetak (confidence ≥ 0.80 → langsung pakai)
-     ├─ TrOCR → teks tulisan tangan (confidence < 0.80 → re-read)
-     ├─ Classifier → identifikasi jenis surat
-     ├─ Extractor → ambil field spesifik + tabel
-     └─ Validator → cek business rules
-     │
-     │ 3. Return JSON terstruktur
-     ▼
-Laravel API
-     │
-     │ 4. Tampilkan form pre-filled di UI
-     ▼
-Petugas Review & Edit (WAJIB sebelum simpan)
-     │
-     │ 5. Submit data yang sudah diverifikasi
-     ▼
-Database MySQL (via Laravel)
-```
+1. **Upload Gambar:** User mengunggah foto dokumen via Front-end.
+2. **Forwarding:** Laravel `InboundOcrController` memanggil `OcrService` (client) mengubah file menjadi format `base64`.
+3. **AI Processing:** `OcrService` melakukan HTTP Request (POST `/ocr`) ke server FastAPI yang berjalan di port `8001` (`CORO/main.py`).
+4. **LLM Extraction:** FastAPI mendeteksi jenis file (contoh: SIR20, RSS1) lalu membangun instruksi dinamis menggunakan model AI (Groq API) melalui sistem multi-pass.
+5. **Return Data Response:** Data yang berhasil diekstraksi ke JSON dikembalikan ke Laravel.
+6. **Verifikasi:** User melakukan *review human-in-the-loop* melalui antarmuka Form UI yang terisi otomatis (Pre-filled form), setelah terkonfirmasi, data disimpan secara permanen di database.
 
 ---
 
-## Dokumen yang Didukung
+## 🌐 Catatan API (FastAPI)
 
-| Dokumen | Jenis | Field Utama |
-|---------|-------|-------------|
-| Surat Pengantar SIR20 | Inbound | no_surat, tanggal, no_kendaraan, tabel lot (no_peti, no_lot, berat, bale) |
-| Surat Pengantar RSS1 | Inbound | no_surat, tanggal, no_kendaraan, tabel lot dengan nomor urut bale |
-| Surat Pengantar Cutting | Inbound | (sama seperti SIR20, perlu sampel dokumen) |
-| Nota Timbang | Inbound (opsional) | no_nota, kendaraan, supir, bruto, tara, netto |
-| Surat Jaminan Mutu | Inbound (opsional) | no_surat, tabel mutu per palet |
-| Sales Order / DO | Outbound | no_so, no_kontrak, pembeli, volume_kg |
-| Surat Kuasa | Outbound | no_surat_kuasa, nama, no_do, jenis, kg, palet |
-
----
-
-## Validasi Business Rules
-
-### Nota Timbang
-- ✅ Netto = Bruto - Tara (toleransi ±5 kg)
-- ✅ Tara dalam range 500–15.000 kg (berat truk kosong)
-- ✅ Format plat kendaraan Indonesia (AB 1234 CD)
-
-### Surat Pengantar
-- ✅ Total bale = jumlah dari semua baris tabel
-- ✅ Total berat dalam range 500–30.000 kg
-- ✅ Nomor surat harus ada
-
-### Surat Kuasa (KRITIS)
-- ✅ Nomor surat kuasa wajib ada
-- ✅ Nomor DO wajib ada (untuk verifikasi otorisasi)
-
----
-
-## Flow Human Review di Frontend
-
-Setelah OCR, tampilkan form dengan:
-1. **Highlight kuning** → field yang confidence rendah atau tidak ditemukan
-2. **Badge "Perlu Cek"** → jika ada warning validasi
-3. **Tombol simpan disabled** → sampai user klik "Saya sudah verifikasi"
-4. **Tabel lot** → tampilkan per baris, user bisa edit/tambah/hapus baris
-
----
-
-## Catatan Penting
-
-### Mengapa Human Review Selalu Wajib?
-Data dari OCR langsung ke database = BERBAHAYA untuk dokumen berat dan keuangan.
-Satu angka yang salah (1,200 vs 12,00) bisa berdampak pada laporan stok.
-Human review adalah safety net yang tidak bisa dihilangkan.
-
-### Offline Mode
-- PaddleOCR: ✅ Offline setelah download model (~15MB)
-- TrOCR: ✅ Offline setelah download model (~340MB, sekali saja)
-- Semua model disimpan lokal di `./models/`
-- Tidak ada ketergantungan cloud saat runtime
-
-### GPU vs CPU
-- GPU (RTX 4050): PaddleOCR ~100–300ms, TrOCR ~50–150ms per dokumen
-- CPU saja: PaddleOCR ~500ms–2s, TrOCR ~2–5s per dokumen
-- Untuk production di server LAN, GPU sangat disarankan
-
-### Jika Foto Kurang dari 300
-Dengan <300 foto, tetap bisa build sistem yang baik dengan:
-1. PaddleOCR pretrained (tidak perlu dataset untuk teks cetak)
-2. TrOCR pretrained (cukup baik untuk tulisan tangan standar)
-3. Fine-tuning hanya jika ada error spesifik yang berulang (misal: angka lot tertentu selalu salah baca)
-4. Tambah dataset augmentasi: rotate, brightness, contrast variation dari foto yang ada
-
----
-
-## Langkah Selanjutnya
-
-**Sekarang (Fase 4):**
-1. Test file `api/main.py` dengan foto dokumen asli
-2. Lihat field mana yang masih salah ekstraksi
-3. Perbaiki regex di file extractor yang relevan
-
-**Berikutnya (Fase 5–6):**
-1. Buat UI form review di Laravel/Blade
-2. Test dengan minimal 20 foto berbeda per jenis dokumen
-3. Catat error patterns → perbaiki regex atau tambah TrOCR
-
-**Jika Akurasi Masih Kurang:**
-1. Kumpulkan foto yang gagal
-2. Fine-tune TrOCR dengan foto tulisan tangan spesifik (perlu ~50–100 sampel per karakter)
-3. Atau tambahkan LLM fallback (Groq API gratis) hanya untuk field yang masih sering salah
+- Server wajib berjalan untuk fitur pemindai. Response API dijamin memiliki *Schema* struktur data universal: `success`, `jenis`, `waktu_s`, `hasil`, dan error response jika terjadi kegagalan/blur.
+- Batasan `Upload`: Pastikan dokumen foto dapat terbaca dan tidak tertutup kilatan lampu flash dominan untuk meminimalisir kesalahan pembacaan LLM.

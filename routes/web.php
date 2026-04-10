@@ -51,6 +51,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/stocks', [StockController::class, 'store'])->name('stocks.store');
         Route::get('/stocks/{stock}/edit', [StockController::class, 'edit'])->name('stocks.edit');
         Route::put('/stocks/{stock}', [StockController::class, 'update'])->name('stocks.update');
+        Route::put('/stocks/{stock}/lot-number', [StockController::class, 'updateLotNumber'])->name('stocks.update_lot');
         Route::delete('/stocks/{stock}', [StockController::class, 'destroy'])->name('stocks.destroy');
     });
 
@@ -60,6 +61,8 @@ Route::middleware(['auth'])->group(function () {
     // Laporan — Krani + Manager
     Route::middleware(['role:admin,manager'])->group(function () {
         Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+        Route::get('/reports/realtime', [ReportController::class, 'realtimeDashboard'])->name('reports.realtime');
+        Route::get('/reports/api/data', [ReportController::class, 'apiRealtimeData'])->name('reports.api.data');
         Route::get('/report/daily-pdf', [ReportController::class, 'downloadDailyPDF'])->name('report.daily.pdf');
     });
 
@@ -78,15 +81,34 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/shipments/{id}/upload-signed-doc', [ShipmentController::class, 'uploadSignedDoc'])->name('shipments.upload_signed_doc');
     });
 
+    // ╔══════════════════════════════════════════════════════════╗
+    // ║  PETUGAS GUDANG (operator): Manajemen Inbound           ║
+    // ║  ⚠️ HARUS sebelum /shipments/{shipment} wildcard!       ║
+    // ╚══════════════════════════════════════════════════════════╝
+    Route::middleware(['role:operator'])->group(function () {
+        // Simpan Data Inbound
+        Route::post('/inbound', [App\Http\Controllers\InboundController::class, 'store'])->name('inbound.store');
+
+        // Verifikasi Barang Keluar — HARUS sebelum wildcard {shipment}
+        Route::get('/shipments/verification', [ShipmentController::class, 'indexVerification'])->name('shipments.verification');
+        Route::post('/shipments/{id}/verify', [ShipmentController::class, 'verify'])->name('shipments.verify');
+
+        // Stock Opname
+        Route::resource('stock-opname', \App\Http\Controllers\StockOpnameController::class)->only(['index', 'store']);
+    });
+
     // Data Pengiriman (list + detail) — Krani + Operator (perlu lihat untuk verifikasi)
     Route::middleware(['role:admin,operator'])->group(function () {
         Route::get('/shipments', [ShipmentController::class, 'index'])->name('shipments.index');
-        Route::get('/shipments/{shipment}', [ShipmentController::class, 'show'])->name('shipments.show');
 
         // Cetak Surat — setelah verifikasi, Krani/Operator bisa cetak
         Route::get('/shipments/{id}/print-sj', [ShipmentController::class, 'printSuratJalan'])->name('shipments.print_sj');
         Route::get('/shipments/{id}/print-ba', [ShipmentController::class, 'printBeritaAcara'])->name('shipments.print_ba');
         Route::get('/shipments/{id}/print-sjt', [ShipmentController::class, 'printSuratJaminan'])->name('shipments.print_sjt');
+
+        // ⚠️ Wildcard HARUS paling bawah agar tidak menangkap /verification, /print-sj, dll
+        Route::get('/shipments/{shipment}', [ShipmentController::class, 'show'])->name('shipments.show')
+            ->where('shipment', '[0-9]+'); // Hanya terima angka, bukan string!
     });
 
     // ╔══════════════════════════════════════════════════════════╗
@@ -101,21 +123,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/ocr/status/{id}', [OCRController::class, 'status'])->name('ocr.status');
         Route::get('/ocr/review/{id}', [OCRController::class, 'reviewById'])->name('ocr.review_by_id');
         Route::post('/ocr/simpan', [OCRController::class, 'simpan'])->name('ocr.simpan');
-    });
-
-    // ╔══════════════════════════════════════════════════════════╗
-    // ║  PETUGAS GUDANG (operator): Manajemen Inbound           ║
-    // ╚══════════════════════════════════════════════════════════╝
-    Route::middleware(['role:operator'])->group(function () {
-        // Simpan Data Inbound
-        Route::post('/inbound', [App\Http\Controllers\InboundController::class, 'store'])->name('inbound.store');
-
-        // Verifikasi Barang Keluar
-        Route::get('/shipments/verification', [ShipmentController::class, 'indexVerification'])->name('shipments.verification');
-        Route::post('/shipments/{id}/verify', [ShipmentController::class, 'verify'])->name('shipments.verify');
-
-        // Stock Opname
-        Route::resource('stock-opname', \App\Http\Controllers\StockOpnameController::class)->only(['index', 'store']);
     });
 });
 
