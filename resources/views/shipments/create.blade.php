@@ -16,7 +16,7 @@
                         Foto Dokumen OCR
                     </h3>
                     <div class="rounded-xl overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center p-2">
-                        <img src="{{ asset('storage/' . request('foto_path')) }}" alt="Dokumen" class="w-full h-auto max-h-[75vh] object-contain rounded-lg">
+                        <img src="{{ url('/cloud-storage/' . request('foto_path')) }}" alt="Dokumen" class="w-full h-auto max-h-[75vh] object-contain rounded-lg">
                     </div>
                 </div>
             </div>
