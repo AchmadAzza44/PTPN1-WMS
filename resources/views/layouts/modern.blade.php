@@ -1493,8 +1493,8 @@
                 padding-right: max(14px, env(safe-area-inset-right));
             }
 
-            /* Sembunyikan notif badge dan user avatar mini di topbar HP */
-            .topbar-extras {
+            /* Sembunyikan user avatar mini di topbar HP, tapi biarkan Bell Notifikasi */
+            .topbar-user {
                 display: none !important;
             }
 
