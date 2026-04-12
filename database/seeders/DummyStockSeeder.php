@@ -18,7 +18,7 @@ class DummyStockSeeder extends Seeder
         $totalPallets = 120;
         $palletsPerLot = 8;
         $totalLots = ceil($totalPallets / $palletsPerLot);
-        $startLotPrefix = 100; // Contoh Lot 100, 101, 102...
+        $startLotPrefix = 1; // Mulai dari Lot 1 s/d 15
 
         $palletCounter = 1;
 
