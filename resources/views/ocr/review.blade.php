@@ -704,18 +704,15 @@
                         <div>
                             @if(isset($mode) && $mode === 'manual')
                                 <div style="display:flex; align-items:center;">
-                                    <form id="switchJenisForm" method="GET" action="{{ route('ocr.manual') }}">
-                                        <input type="hidden" name="type" value="{{ $type }}">
-                                        <select name="jenis" onchange="document.getElementById('switchJenisForm').submit()" class="bg-white border border-slate-300 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2 px-3 font-bold text-slate-700 shadow-sm" style="padding-right: 32px">
-                                            @if($type == 'outbound')
-                                                <option value="do" {{ $jenis == 'do' ? 'selected' : '' }}>Delivery Order</option>
-                                                <option value="surat_kuasa" {{ $jenis == 'surat_kuasa' ? 'selected' : '' }}>Surat Kuasa</option>
-                                            @else
-                                                <option value="sir20" {{ $jenis == 'sir20' ? 'selected' : '' }}>Surat Pengantar SIR 20</option>
-                                                <option value="rss1" {{ $jenis == 'rss1' ? 'selected' : '' }}>Bukti Pengantar RSS 1</option>
-                                            @endif
-                                        </select>
-                                    </form>
+                                    <select onchange="window.location.href='{{ route('ocr.manual') }}?type={{ $type }}&jenis=' + this.value" class="bg-white border border-slate-300 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2 px-3 font-bold text-slate-700 shadow-sm" style="padding-right: 32px">
+                                        @if($type == 'outbound')
+                                            <option value="do" {{ $jenis == 'do' ? 'selected' : '' }}>Delivery Order</option>
+                                            <option value="surat_kuasa" {{ $jenis == 'surat_kuasa' ? 'selected' : '' }}>Surat Kuasa</option>
+                                        @else
+                                            <option value="sir20" {{ $jenis == 'sir20' ? 'selected' : '' }}>Surat Pengantar SIR 20</option>
+                                            <option value="rss1" {{ $jenis == 'rss1' ? 'selected' : '' }}>Bukti Pengantar RSS 1</option>
+                                        @endif
+                                    </select>
                                 </div>
                                 <p style="font-size:11px;color:var(--text-muted);margin:4px 0 0 0;">Ganti jenis dokumen yang ingin di-input manual</p>
                             @else
