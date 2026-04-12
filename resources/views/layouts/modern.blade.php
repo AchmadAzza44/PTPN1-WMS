@@ -2828,19 +2828,42 @@
         }
 
         function initPush() {
-            if (!("Notification" in window)) return;
+            const btn = document.getElementById('enable-push-btn');
+            if (!btn) return;
+            
+            if (!("Notification" in window)) {
+                btn.style.display = 'none';
+                return;
+            }
+            
             @auth
             if (Notification.permission === "default") {
-                const btn = document.getElementById('enable-push-btn');
-                if (btn) btn.style.display = 'block';
+                btn.style.display = 'block';
+                btn.textContent = 'Aktifkan Alert HP';
+            } else if (Notification.permission === "denied") {
+                btn.style.display = 'block';
+                btn.textContent = 'Alert HP Diblokir';
+                btn.style.opacity = '0.6';
+                btn.style.background = 'rgba(239, 68, 68, 0.1)';
+                btn.style.color = 'var(--red)';
+                btn.style.borderColor = 'rgba(239, 68, 68, 0.3)';
             } else if (Notification.permission === "granted") {
+                btn.style.display = 'none'; // hide if already granted
                 subscribeUser();
             }
             @endauth
         }
 
         window.requestPushPermission = function() {
-            if (!("Notification" in window)) return;
+            if (!("Notification" in window)) {
+                if (typeof toast === 'function') toast('Browser tidak mendukung notifikasi.', 'error');
+                return;
+            }
+            if (Notification.permission === "denied") {
+                if (typeof toast === 'function') toast('Izin diblokir. Harap buka Pengaturan Situs di browser PHP dan izinkan notifikasi.', 'error', 6000);
+                return;
+            }
+            
             Notification.requestPermission().then(function (permission) {
                 if (permission === "granted") {
                     subscribeUser();
@@ -2853,6 +2876,7 @@
                     if (typeof toast === 'function') {
                         toast('Izin Push Notifikasi ditolak oleh sistem HP.', 'error');
                     }
+                    initPush(); // refresh button state
                 }
             });
         };
