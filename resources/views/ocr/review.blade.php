@@ -1067,6 +1067,7 @@
                                     params.append('vehicle_plate', document.querySelector('[name="hasil[no_kendaraan]"]')?.value || '');
                                     params.append('driver_name', document.querySelector('[name="hasil[nama_penerima]"]')?.value || '');
                                 @endif
+                                if(body.foto_path) params.append('foto_path', body.foto_path);
                                 window.location.href = "{{ route('shipments.create') }}?" + params.toString();
                             @else
                                 window.location.href = "{{ route('ocr.index', ['type' => $type]) }}";
@@ -1088,6 +1089,7 @@
                                 params.append('vehicle_plate', document.querySelector('[name="hasil[no_kendaraan]"]')?.value || '');
                                 params.append('driver_name', document.querySelector('[name="hasil[nama_penerima]"]')?.value || '');
                             @endif
+                            if(body.foto_path) params.append('foto_path', body.foto_path);
                             window.location.href = "{{ route('shipments.create') }}?" + params.toString();
                         @else
                             window.location.href = "{{ route('ocr.index', ['type' => $type]) }}";

@@ -5,7 +5,25 @@
 @section('subheader', 'Buat Surat Jalan dan alokasikan stok untuk pengiriman')
 
 @section('content')
-    <div class="max-w-4xl mx-auto">
+    <div class="{{ request('foto_path') ? 'max-w-7xl' : 'max-w-4xl' }} mx-auto">
+        <div class="grid grid-cols-1 {{ request('foto_path') ? 'lg:grid-cols-12 gap-8' : '' }}">
+            @if(request('foto_path'))
+            <!-- Kolom Kiri: Foto Dokumen -->
+            <div class="lg:col-span-5 relative">
+                <div class="sticky top-6 glass p-4 rounded-2xl shadow-sm border-t-4 border-blue-500">
+                    <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center">
+                        <i data-lucide="image" class="w-4 h-4 mr-2 text-slate-400"></i>
+                        Foto Dokumen OCR
+                    </h3>
+                    <div class="rounded-xl overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center p-2">
+                        <img src="{{ asset('storage/' . request('foto_path')) }}" alt="Dokumen" class="w-full h-auto max-h-[75vh] object-contain rounded-lg">
+                    </div>
+                </div>
+            </div>
+            <div class="lg:col-span-7">
+            @else
+            <div>
+            @endif
         <form action="{{ route('shipments.store') }}" method="POST" id="shipmentForm">
             @csrf
 
@@ -166,6 +184,11 @@
                 </div>
             </div>
         </form>
+        @if(request('foto_path'))
+            </div>
+        @endif
+        </div>
+    </div>
     </div>
 
     <!-- Scripts -->

@@ -176,6 +176,18 @@
                                         class="block w-full border-slate-200 rounded-lg text-sm bg-blue-50 focus:ring-blue-500 focus:border-blue-500">
                                 </div>
                             </div>
+                            <div class="grid grid-cols-2 gap-2 mt-2">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 uppercase">Nama Krani</label>
+                                    <input type="text" name="krani_name" value="{{ $shipment->krani_name ?? auth()->user()->name }}"
+                                        class="block w-full border-slate-200 rounded-lg text-sm bg-blue-50 focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 uppercase">Nama Manajer</label>
+                                    <input type="text" name="manager_name" value="{{ $shipment->manager_name ?? 'Erwanda Erianto' }}"
+                                        class="block w-full border-slate-200 rounded-lg text-sm bg-blue-50 focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                            </div>
                             <button type="submit"
                                 class="w-full py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg text-xs transition-colors shadow-lg shadow-green-500/30">
                                 <i data-lucide="check-circle" class="w-4 h-4 inline mr-1"></i>

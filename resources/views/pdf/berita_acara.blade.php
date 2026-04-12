@@ -371,11 +371,11 @@
         </tr>
         <tr>
             <td style="text-align: left;">
-                <span class="signature-name">___________________</span>
+                <span class="signature-name">{{ strtoupper($shipment->manager_name ?? '_______________') }}</span>
             </td>
             <td></td>
             <td style="text-align: right;">
-                <span class="signature-name">___________________</span>
+                <span class="signature-name">{{ strtoupper($shipment->krani_name ?? '_______________') }}</span>
             </td>
         </tr>
     </table>
@@ -393,7 +393,7 @@
         </tr>
         <tr>
             <td colspan="3" style="text-align: center;">
-                <span class="signature-name">___________________</span>
+                <span class="signature-name">{{ strtoupper($shipment->manager_name ?? '_______________') }}</span>
             </td>
         </tr>
     </table>

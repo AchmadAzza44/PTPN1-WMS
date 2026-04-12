@@ -181,13 +181,17 @@ class ShipmentController extends Controller
 
             DB::commit();
 
-            // Kirim Push Notification ke seluruh Petugas Gudang (operator)
-            $petugasGudang = User::where('role', 'operator')->get();
-            if ($petugasGudang->count() > 0) {
-                Notification::send($petugasGudang, new ShipmentVerificationNotification($shipment));
+            try {
+                // Kirim Push Notification ke seluruh Petugas Gudang (operator)
+                $petugasGudang = User::where('role', 'operator')->get();
+                if ($petugasGudang->count() > 0) {
+                    Notification::send($petugasGudang, new ShipmentVerificationNotification($shipment));
+                }
+            } catch (\Exception $e) {
+                \Log::warning('Push Notification Error: ' . $e->getMessage());
             }
 
-            return redirect()->route('shipments.show', $shipment->id)->with('success', 'Pengiriman parsial/penuh berhasil dibuat! Silakan lanjut ke verifikasi.');
+            return redirect()->route('shipments.show', $shipment->id)->with('success', 'Pesanan diproses, tunggu petugas verifikasi');
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -276,10 +280,14 @@ class ShipmentController extends Controller
             'vehicle_plate' => collect([$request->vehicle_plate, $shipment->vehicle_plate])->filter()->first()
         ]);
 
-        // Kirim Push Notification ke seluruh Krani (admin) kalau sudah diverifikasi
-        $krani = User::where('role', 'admin')->get();
-        if ($krani->count() > 0) {
-            Notification::send($krani, new ShipmentVerifiedNotification($shipment));
+        try {
+            // Kirim Push Notification ke seluruh Krani (admin) kalau sudah diverifikasi
+            $krani = User::where('role', 'admin')->get();
+            if ($krani->count() > 0) {
+                Notification::send($krani, new ShipmentVerifiedNotification($shipment));
+            }
+        } catch (\Exception $e) {
+            \Log::warning('Push Notification Error: ' . $e->getMessage());
         }
 
         return back()->with('success', 'Pengiriman berhasil diverifikasi! Dokumen siap dicetak.');
@@ -293,6 +301,8 @@ class ShipmentController extends Controller
             'transporter_name' => 'nullable|string',
             'driver_name' => 'nullable|string',
             'vehicle_plate' => 'nullable|string',
+            'krani_name' => 'nullable|string',
+            'manager_name' => 'nullable|string',
         ]);
 
         $shipment = Shipment::findOrFail($id);
@@ -302,6 +312,8 @@ class ShipmentController extends Controller
             'transporter_name' => collect([$request->transporter_name, $shipment->transporter_name])->filter()->first(),
             'driver_name' => collect([$request->driver_name, $shipment->driver_name])->filter()->first(),
             'vehicle_plate' => collect([$request->vehicle_plate, $shipment->vehicle_plate])->filter()->first(),
+            'krani_name' => collect([$request->krani_name, $shipment->krani_name])->filter()->first() ?? auth()->user()->name,
+            'manager_name' => collect([$request->manager_name, $shipment->manager_name])->filter()->first(),
             'status' => 'completed', // Krani confirms → completed
         ]);
 

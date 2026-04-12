@@ -132,7 +132,7 @@
         <tr>
             <td>
                 Dibuat Oleh,<br><br><br><br>
-                ( Krani Pengiriman )
+                ( {{ strtoupper($shipment->krani_name ?? 'Krani Pengiriman') }} )
             </td>
             <td>
                 Diperiksa Oleh,<br><br><br><br>

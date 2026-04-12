@@ -95,7 +95,7 @@
                         <thead>
                             <tr style="background:rgba(248,250,252,0.9);">
                                 <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;border-bottom:1px solid #e2e8f0;min-width:100px;">No. Peti/FDF</th>
-                                <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;border-bottom:1px solid #e2e8f0;min-width:100px;">No. Palet</th>
+                                <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;border-bottom:1px solid #e2e8f0;min-width:100px;">No. Lot</th>
                                 <th style="padding:10px 12px;text-align:center;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;border-bottom:1px solid #e2e8f0;min-width:70px;">Bale</th>
                                 <th style="padding:10px 12px;text-align:right;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;border-bottom:1px solid #e2e8f0;min-width:120px;">Berat (kg)</th>
                                 <th style="padding:10px 12px;text-align:center;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;border-bottom:1px solid #e2e8f0;width:60px;">Tipe</th>
@@ -113,10 +113,10 @@
                                         onfocus="this.style.borderColor='#4AADE4';this.style.boxShadow='0 0 0 3px rgba(74,173,228,0.12)'"
                                         onblur="this.style.borderColor='#e2e8f0';this.style.boxShadow='none'">
                                 </td>
-                                <td style="padding:8px 10px;" data-label="No. Palet">
+                                <td style="padding:8px 10px;" data-label="No. Lot">
                                     <input type="text" name="details[{{ $i }}][pallet_number]"
                                         value="{{ $detail->pallet_number }}"
-                                        placeholder="No. Palet"
+                                        placeholder="No. Lot"
                                         style="width:100%;padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px;font-family:monospace;font-weight:600;outline:none;transition:border-color 0.2s;box-sizing:border-box;background:white;"
                                         onfocus="this.style.borderColor='#4AADE4';this.style.boxShadow='0 0 0 3px rgba(74,173,228,0.12)'"
                                         onblur="this.style.borderColor='#e2e8f0';this.style.boxShadow='none'">

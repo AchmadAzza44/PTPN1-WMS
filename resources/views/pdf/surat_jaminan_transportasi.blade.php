@@ -352,11 +352,11 @@
         <tr>
             <td class="sig-left">
                 <div class="sig-space"></div>
-                <span class="sig-name">___________________</span>
+                <span class="sig-name">{{ strtoupper($shipment->manager_name ?? '_______________') }}</span>
             </td>
             <td class="sig-center">
                 <div class="sig-space"></div>
-                <span class="sig-name">___________________</span>
+                <span class="sig-name">{{ strtoupper($shipment->krani_name ?? '_______________') }}</span>
             </td>
             <td></td>
         </tr>

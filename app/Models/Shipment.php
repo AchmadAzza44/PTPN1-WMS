@@ -19,7 +19,9 @@ class Shipment extends Model
         'signed_document_path',
         'status',
         'verified_at',
-        'verified_by'
+        'verified_by',
+        'krani_name',
+        'manager_name'
     ];
 
     protected $casts = [

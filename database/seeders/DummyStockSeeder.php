@@ -33,7 +33,7 @@ class DummyStockSeeder extends Seeder
                 'quality_type' => 'SIR 20 SW',
                 'origin_unit' => 'SIR',
                 'status' => 'blue', // Tersedia di gudang
-                'inbound_at' => Carbon::now()->subDays(rand(0, 5)), // Waktu masuk diacak dalam 5 hari terakhir
+                'inbound_at' => Carbon::now()->subDays($totalLots - $i), // Menjamin urutan FIFO yang benar secara kronologis
             ]);
 
             // Tentukan berapa palet di Lot ini (biasanya 8, kecuali sisa akhir pembagian jika total tidak habis dibagi 8)

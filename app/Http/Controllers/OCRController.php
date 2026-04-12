@@ -197,7 +197,7 @@ class OCRController extends Controller
             return response()->json(['success' => false, 'message' => 'Gagal simpan'], 500);
         }
 
-        return response()->json(['success' => true, 'message' => 'Data berhasil disimpan', 'id' => $saved]);
+        return response()->json(['success' => true, 'message' => 'Data berhasil disimpan', 'id' => $saved, 'foto_path' => $fotoPath]);
     }
 
     // ── Sanitize Helpers ──────────────────────────────────────────────────────
