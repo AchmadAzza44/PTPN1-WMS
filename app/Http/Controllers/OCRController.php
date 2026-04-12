@@ -336,28 +336,40 @@ class OCRController extends Controller
                 ]);
             } else {
                 $transactionCreated = false;
+
+                // Kelompokkan baris (palet) berdasarkan no_lot
+                $groupedBaris = [];
                 foreach ($baris as $b) {
-                    $lotNo = $b['no_lot'] ?? ('TMP-' . rand(1000, 9999));
+                    $lotNo = trim($b['no_lot'] ?? ('TMP-' . rand(1000, 9999)));
+                    if ($lotNo === '') $lotNo = 'TMP-' . rand(1000, 9999);
+                    $groupedBaris[$lotNo][] = $b;
+                }
+
+                foreach ($groupedBaris as $lotNo => $items) {
                     $fullLotNumber = $lotNo . '-' . date('dmY');
 
-                    $stockLot = StockLot::create([
-                        'lot_number' => $fullLotNumber,
-                        'production_year' => date('Y'),
-                        'quality_type' => 'SIR 20 SW',
-                        'origin_unit' => 'SIR',
-                        'status' => 'blue',
-                        'inbound_at' => now(),
-                    ]);
+                    $stockLot = StockLot::firstOrCreate(
+                        ['lot_number' => $fullLotNumber],
+                        [
+                            'production_year' => date('Y'),
+                            'quality_type' => 'SIR 20 SW',
+                            'origin_unit' => 'SIR',
+                            'status' => 'blue',
+                            'inbound_at' => now(),
+                        ]
+                    );
 
-                    StockDetail::create([
-                        'stock_lot_id' => $stockLot->id,
-                        'packaging_type' => 'pallet',
-                        'fdf_number' => $b['no_peti'] ?? $ticketNumber,
-                        'pallet_number' => $b['no_palet'] ?? null,
-                        'bale_range' => '-',
-                        'quantity_unit' => $b['jml_bale'] ?? 0,
-                        'net_weight_kg' => $b['berat_kg'] ?? 0,
-                    ]);
+                    foreach ($items as $b) {
+                        StockDetail::create([
+                            'stock_lot_id' => $stockLot->id,
+                            'packaging_type' => 'pallet',
+                            'fdf_number' => $b['no_peti'] ?? $ticketNumber,
+                            'pallet_number' => null, // Sesuai permintaan form yang dihapus
+                            'bale_range' => '-',
+                            'quantity_unit' => $b['jml_bale'] ?? 0,
+                            'net_weight_kg' => $b['berat_kg'] ?? 0,
+                        ]);
+                    }
 
                     if (!$transactionCreated) {
                         InboundTransaction::create([
