@@ -2893,15 +2893,34 @@
         };
 
         function subscribeUser() {
+            const vapidKey = '{{ config("webpush.vapid.public_key") }}';
+            if (!vapidKey) {
+                console.error('VAPID Public Key is missing on the server!');
+                if (typeof toast === 'function') toast('Konfigurasi WebPush Server (VAPID) belum diatur di .env public cloud!', 'error', 8000);
+                
+                const btn = document.getElementById('enable-push-btn');
+                if (btn) {
+                    btn.style.display = 'block';
+                    btn.textContent = 'Server VAPID Error';
+                    btn.style.background = '#888';
+                    btn.style.color = '#fff';
+                    btn.style.pointerEvents = 'none';
+                }
+                return;
+            }
+
             navigator.serviceWorker.ready.then((registration) => {
                 const subscribeOptions = {
                     userVisibleOnly: true,
-                    applicationServerKey: urlBase64ToUint8Array('{{ config("webpush.vapid.public_key") }}')
+                    applicationServerKey: urlBase64ToUint8Array(vapidKey)
                 };
                 return registration.pushManager.subscribe(subscribeOptions);
             }).then((pushSubscription) => {
                 storePushSubscription(pushSubscription);
-            }).catch(err => console.log('Push subscription error: ', err));
+            }).catch(err => {
+                console.log('Push subscription error: ', err);
+                if (typeof toast === 'function') toast('Gagal mendaftarkan Push Notifikasi ke OS. Cek permission browser Anda.', 'error');
+            });
         }
 
         function urlBase64ToUint8Array(base64String) {
