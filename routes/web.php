@@ -86,22 +86,20 @@ Route::middleware(['auth'])->group(function () {
 
     // ╔══════════════════════════════════════════════════════════╗
     // ║  PETUGAS GUDANG (operator): Manajemen Inbound           ║
-    // ║  ⚠️ HARUS sebelum /shipments/{shipment} wildcard!       ║
     // ╚══════════════════════════════════════════════════════════╝
     Route::middleware(['role:operator'])->group(function () {
         // Simpan Data Inbound
         Route::post('/inbound', [App\Http\Controllers\InboundController::class, 'store'])->name('inbound.store');
 
-        // Verifikasi Barang Keluar — HARUS sebelum wildcard {shipment}
-        Route::get('/shipments/verification', [ShipmentController::class, 'indexVerification'])->name('shipments.verification');
-        Route::post('/shipments/{id}/verify', [ShipmentController::class, 'verify'])->name('shipments.verify');
-
         // Stock Opname
         Route::resource('stock-opname', \App\Http\Controllers\StockOpnameController::class)->only(['index', 'store']);
     });
 
-    // Data Pengiriman (list + detail) — Krani + Operator (perlu lihat untuk verifikasi)
+    // Data Pengiriman & Verifikasi — Krani + Operator (perlu lihat untuk verifikasi)
     Route::middleware(['role:admin,operator'])->group(function () {
+        Route::get('/shipments/verification', [ShipmentController::class, 'indexVerification'])->name('shipments.verification');
+        Route::post('/shipments/{id}/verify', [ShipmentController::class, 'verify'])->name('shipments.verify');
+
         Route::get('/shipments', [ShipmentController::class, 'index'])->name('shipments.index');
 
         // Cetak Surat — setelah verifikasi, Krani/Operator bisa cetak
