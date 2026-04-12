@@ -37,8 +37,8 @@ Route::middleware(['auth'])->group(function () {
     // ║  SHARED: Semua role (admin, operator, manager)          ║
     // ╚══════════════════════════════════════════════════════════╝
 
-    // Dashboard — Krani + Manager (operator tidak perlu dashboard)
-    Route::middleware(['role:admin,manager'])->group(function () {
+    // Dashboard — Krani + Petugas
+    Route::middleware(['role:admin,operator'])->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     });
 
@@ -58,8 +58,8 @@ Route::middleware(['auth'])->group(function () {
     // Show route setelah CRUD routes agar tidak tertangkap wildcard
     Route::get('/stocks/{stock}', [StockController::class, 'show'])->name('stocks.show');
 
-    // Laporan — Krani + Manager
-    Route::middleware(['role:admin,manager'])->group(function () {
+    // Laporan — Krani + Petugas
+    Route::middleware(['role:admin,operator'])->group(function () {
         Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
         Route::get('/reports/realtime', [ReportController::class, 'realtimeDashboard'])->name('reports.realtime');
         Route::get('/reports/api/data', [ReportController::class, 'apiRealtimeData'])->name('reports.api.data');
@@ -151,15 +151,7 @@ Route::get('/create-user', function () {
                 'role' => 'admin'
             ]
         );
-        \App\Models\User::updateOrCreate(
-            ['email' => 'manager@ptpn1.co.id'],
-            [
-                'name' => 'Manager Gudang',
-                'password' => \Illuminate\Support\Facades\Hash::make('password'),
-                'role' => 'manager'
-            ]
-        );
-        return 'Users Created Successfully!<br>1. Krani Gudang (admin@ptpn1.co.id)<br>2. Petugas Gudang (operator@ptpn1.co.id)<br>3. Manager (manager@ptpn1.co.id)<br>Password: password';
+        return 'Users Created Successfully!<br>1. Krani Gudang (admin@ptpn1.co.id)<br>2. Petugas Gudang (operator@ptpn1.co.id)<br>Password: password';
     } catch (\Exception $e) {
         return 'Error: ' . $e->getMessage();
     }

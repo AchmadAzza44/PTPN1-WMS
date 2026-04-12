@@ -30,14 +30,5 @@ class DefaultUserSeeder extends Seeder
             ]
         );
 
-        // Manager
-        User::updateOrCreate(
-            ['email' => 'manager@ptpn1.co.id'],
-            [
-                'name' => 'Manager Logistik',
-                'password' => Hash::make('password'),
-                'role' => 'manager',
-            ]
-        );
     }
 }

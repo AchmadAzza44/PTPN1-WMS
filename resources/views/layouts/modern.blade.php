@@ -1921,8 +1921,8 @@
             {{-- ══════ MENU UTAMA ══════ --}}
             <div class="nav-section-label">Menu Utama</div>
 
-            {{-- Dashboard — Krani (admin) + Manager --}}
-            @if(in_array($role, ['admin', 'manager']))
+            {{-- Dashboard — Krani (admin) + Petugas (operator) --}}
+            @if(in_array($role, ['admin', 'operator']))
             <a href="{{ route('dashboard') }}" class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}">
                 <div class="nav-icon {{ request()->routeIs('dashboard') ? 'green' : 'default' }}">
                     <i data-lucide="layout-dashboard" style="width:17px;height:17px;"></i>
@@ -2023,8 +2023,8 @@
             </a>
             @endif
 
-            {{-- ══════ LAPORAN — Krani + Manager ══════ --}}
-            @if(in_array($role, ['admin', 'manager']))
+            {{-- ══════ LAPORAN — Krani + Petugas ══════ --}}
+            @if(in_array($role, ['admin', 'operator']))
             <div class="nav-section-label" style="margin-top: 16px;">Laporan</div>
 
             <a href="{{ route('reports.index') }}"
@@ -2199,7 +2199,12 @@
                     Data Pengiriman
                 </a>
             @endif
-            @if($mobileRole === 'admin')
+            @if(in_array($mobileRole, ['admin', 'operator']))
+                <a href="{{ route('dashboard') }}"
+                    class="more-menu-item {{ request()->routeIs('dashboard') ? 'active' : '' }}">
+                    <i data-lucide="layout-dashboard" style="width:16px;height:16px;color:var(--green);"></i>
+                    Dashboard
+                </a>
                 <a href="{{ route('reports.index') }}"
                     class="more-menu-item {{ request()->routeIs('reports.*') ? 'active' : '' }}">
                     <i data-lucide="bar-chart-3" style="width:16px;height:16px;color:var(--blue);"></i>
@@ -2265,24 +2270,7 @@
                 </a>
             @endif
 
-            {{-- ══════ MANAGER Bottom Nav ══════ --}}
-            @if($mobileRole === 'manager')
-                <a href="{{ route('dashboard') }}"
-                    class="bottom-nav-item {{ request()->routeIs('dashboard') ? 'active' : '' }}">
-                    <div class="bottom-nav-icon"><i data-lucide="layout-dashboard" style="width:18px;height:18px;"></i></div>
-                    <span class="bottom-nav-label">Dashboard</span>
-                </a>
-                <a href="{{ route('stocks.index') }}"
-                    class="bottom-nav-item {{ request()->routeIs('stocks.*') ? 'active' : '' }}">
-                    <div class="bottom-nav-icon"><i data-lucide="package-2" style="width:18px;height:18px;"></i></div>
-                    <span class="bottom-nav-label">Stok</span>
-                </a>
-                <a href="{{ route('reports.index') }}"
-                    class="bottom-nav-item {{ request()->routeIs('reports.*') ? 'active-blue' : '' }}">
-                    <div class="bottom-nav-icon"><i data-lucide="bar-chart-3" style="width:18px;height:18px;"></i></div>
-                    <span class="bottom-nav-label">Laporan</span>
-                </a>
-            @endif
+
 
             <!-- More -->
             <button type="button" @click="moreOpen = !moreOpen" class="bottom-nav-item">
