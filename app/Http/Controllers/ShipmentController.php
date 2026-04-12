@@ -33,9 +33,12 @@ class ShipmentController extends Controller
     public function create(Request $request)
     {
         $doNumber = $request->query('do_number_manual');
+        $fotoPath = $request->query('foto_path') ?? $request->foto_path; // handle both ways
+        
         // Ambil data pre-fill dari OCR (jika ada)
         $preFill = [
             'do_number_manual' => $doNumber,
+            'foto_path' => $fotoPath,
             'contract_number_ref' => $request->query('contract_number_ref'),
             'documented_qty_kg' => $request->query('documented_qty_kg'),
             'transporter_name' => $request->query('transporter_name'),
@@ -52,6 +55,22 @@ class ShipmentController extends Controller
                 if (empty($preFill['contract_number_ref']) && $po->contract) {
                     $preFill['contract_number_ref'] = $po->contract->contract_number;
                 }
+
+                // Coba ambil foto_path dari PO jika tidak dikirim dari request
+                if (empty($preFill['foto_path']) && $po->foto_path) {
+                    $preFill['foto_path'] = $po->foto_path;
+                    // Menyematkan foto_path ke request agar blade file (yang mungkin masih pakai request('foto_path')) dapat membaca dengan baik.
+                    $request->merge(['foto_path' => $po->foto_path]);
+                }
+
+                // Coba ambil info transporter dari shipment terakhir parsial
+                $latestShipment = $po->shipments()->latest()->first();
+                if ($latestShipment) {
+                    if (empty($preFill['transporter_name'])) $preFill['transporter_name'] = $latestShipment->transporter_name !== '-' ? $latestShipment->transporter_name : '';
+                    if (empty($preFill['driver_name'])) $preFill['driver_name'] = $latestShipment->driver_name !== '-' ? $latestShipment->driver_name : '';
+                    if (empty($preFill['vehicle_plate'])) $preFill['vehicle_plate'] = $latestShipment->vehicle_plate !== '-' ? $latestShipment->vehicle_plate : '';
+                }
+
                 $preFill['total_pesanan_kg'] = $po->qty_ordered_kg;
                 $rem = max(0, $po->qty_ordered_kg - $po->qty_served_kg);
                 $preFill['sisa_pesanan_kg'] = $rem;
@@ -130,8 +149,14 @@ class ShipmentController extends Controller
                     'po_date' => now(),
                     'qty_ordered_kg' => $requested_do_qty,
                     'qty_served_kg' => 0,
-                    'status' => 'open'
+                    'status' => 'open',
+                    'foto_path' => $request->foto_path
                 ]);
+            } else {
+                if ($request->foto_path && empty($po->foto_path)) {
+                    $po->foto_path = $request->foto_path;
+                    $po->save();
+                }
             }
 
             // Hitung total diangkut untuk Shipment ini
@@ -155,20 +180,35 @@ class ShipmentController extends Controller
             foreach ($request->items as $item) {
                 $stockLot = StockLot::find($item['stock_lot_id']);
 
-                // Validasi lagi stok cukup
-                $currentStock = $stockLot->details()->sum('net_weight_kg');
-                if ($currentStock < $item['qty_loaded_kg']) {
-                    throw new \Exception("Stok tidak cukup untuk Lot " . $stockLot->lot_number);
-                }
+                // Validasi & Kurangi Stok berdasarkan detail spesifik jika ada
+                if (!empty($item['selected_details']) && is_array($item['selected_details'])) {
+                    // Cek ketersediaan
+                    $availableDetailsWeight = $stockLot->details()
+                        ->whereIn('id', $item['selected_details'])
+                        ->sum('net_weight_kg');
 
-                // Kurangi Stok (Panggil method di Model)
-                $stockLot->reduceStock($item['qty_loaded_kg']);
+                    if ($availableDetailsWeight <= 0 || $availableDetailsWeight < $item['qty_loaded_kg']) {
+                        throw new \Exception("Stok Palet terpilih tidak cukup / sudah kosong untuk Lot " . $stockLot->lot_number);
+                    }
+
+                    $stockLot->reduceStockByDetails($item['selected_details']);
+                    $selectedDetailIds = $item['selected_details'];
+                } else {
+                    // Fallback FIFO jika tidak pakai checkbox palet
+                    $currentStock = $stockLot->details()->sum('net_weight_kg');
+                    if ($currentStock < $item['qty_loaded_kg']) {
+                        throw new \Exception("Stok tidak cukup untuk Lot " . $stockLot->lot_number);
+                    }
+                    $stockLot->reduceStock($item['qty_loaded_kg']);
+                    $selectedDetailIds = null;
+                }
 
                 // Catat di Shipment Items
                 ShipmentItem::create([
                     'shipment_id' => $shipment->id,
                     'stock_lot_id' => $stockLot->id,
                     'qty_loaded_kg' => $item['qty_loaded_kg'],
+                    'selected_detail_ids' => $selectedDetailIds,
                 ]);
             }
 

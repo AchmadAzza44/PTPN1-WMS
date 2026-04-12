@@ -13,7 +13,8 @@ class PurchaseOrder extends Model
         'po_date',
         'qty_ordered_kg',
         'qty_served_kg',
-        'status'
+        'status',
+        'foto_path'
     ];
 
     public function contract(): BelongsTo

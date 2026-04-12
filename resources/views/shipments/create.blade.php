@@ -26,6 +26,7 @@
             @endif
         <form action="{{ route('shipments.store') }}" method="POST" id="shipmentForm">
             @csrf
+            <input type="hidden" name="foto_path" value="{{ request('foto_path') ?? ($preFill['foto_path'] ?? '') }}">
 
             <!-- Cek Stok Alert -->
             <div id="stockAlert" class="hidden mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-xl shadow-sm items-start transition-all">
@@ -217,20 +218,18 @@
             const index = container.children.length;
 
             const row = document.createElement('div');
-            row.className = 'item-row grid grid-cols-12 gap-4 p-4 rounded-xl border border-slate-200 bg-white hover:border-blue-300 transition-colors relative group';
+            row.className = 'item-row col-span-12 p-4 rounded-xl border border-slate-200 bg-white hover:border-blue-300 transition-colors relative group';
             row.innerHTML = `
+                <div class="grid grid-cols-12 gap-4">
                     <div class="col-span-12 md:col-span-7">
                         <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Pilih Lot Stok</label>
-                        <select name="items[${index}][stock_lot_id]" required onchange="updateRowMax(this)" 
-                                class="block w-full border-slate-200 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500 font-mono">
+                        <select name="items[${index}][stock_lot_id]" required onchange="updateRowMax(this, ${index})" 
+                                class="stock-select block w-full border-slate-200 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500 font-mono">
                             <option value="">-- Pilih Lot --</option>
                             ${stocks.map((s, idx) => {
-                const fdfLabel = s.fdf_numbers && s.fdf_numbers.length > 0
-                    ? ' | ' + s.fdf_numbers.join(', ')
-                    : '';
-                const fifoTag = idx < 3 ? ' ⭐ FIFO' : '';
-                return `<option value="${s.id}" data-max="${s.remaining_weight.toFixed(2)}" data-fdf="${(s.fdf_numbers || []).join(', ')}">Lot ${s.lot_number}${fdfLabel} (${s.quality_type}) - Sisa: ${s.remaining_weight.toLocaleString()} kg${fifoTag}</option>`;
-            }).join('')}
+                                const fifoTag = idx < 3 ? ' ⭐ FIFO' : '';
+                                return `<option value="${s.id}" data-max="${s.remaining_weight.toFixed(2)}">Lot ${s.lot_number} (${s.quality_type}) - Sisa: ${s.remaining_weight.toLocaleString()} kg${fifoTag}</option>`;
+                            }).join('')}
                         </select>
                         <p class="text-[10px] text-slate-400 mt-1 fdf-hint"></p>
                     </div>
@@ -252,39 +251,102 @@
                             <i data-lucide="trash-2" class="w-5 h-5"></i>
                         </button>
                     </div>
-                `;
+                </div>
+                <div class="pallet-container mt-3 hidden p-3 bg-slate-50 border border-slate-100 rounded-lg">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2"><i data-lucide="layers" class="w-3 h-3 inline mr-1"></i> Pilih Spesifik Palet (Opsional)</label>
+                    <div class="pallet-list grid grid-cols-2 md:grid-cols-4 gap-2"></div>
+                </div>
+            `;
 
             container.appendChild(row);
-            lucide.createIcons();
+            if(window.lucide) window.lucide.createIcons();
         }
 
-        function updateRowMax(select) {
-            const option = select.options[select.selectedIndex];
-            const max = option.dataset.max;
-            const fdf = option.dataset.fdf;
+        function updateRowMax(select, rowIndex) {
             const row = select.closest('.item-row');
             const input = row.querySelector('.qty-input');
             const hint = row.querySelector('.max-hint');
             const fdfHint = row.querySelector('.fdf-hint');
+            const palletContainer = row.querySelector('.pallet-container');
+            const palletList = row.querySelector('.pallet-list');
+            
+            const selectedStockId = select.value;
+            const stock = stocks.find(s => s.id == selectedStockId);
 
-            if (max) {
+            if (stock) {
+                const max = stock.remaining_weight.toFixed(2);
                 input.max = max;
                 input.value = max; // Auto-fill max for convenience
+                input.readOnly = false;
                 hint.textContent = `Maks: ${parseFloat(max).toLocaleString()} kg`;
                 hint.classList.add('text-blue-500');
+
+                // Render checkboxes for details
+                if (stock.details && stock.details.length > 0) {
+                    palletContainer.classList.remove('hidden');
+                    palletList.innerHTML = stock.details.map(d => `
+                        <label class="flex items-center p-2 rounded-lg border border-slate-200 bg-white hover:bg-blue-50 cursor-pointer transition-colors text-xs font-mono">
+                            <input type="checkbox" name="items[${rowIndex}][selected_details][]" value="${d.id}" class="pallet-checkbox mr-2 rounded text-blue-600 focus:ring-blue-500" data-weight="${d.net_weight_kg}" onchange="recalcPalletWeight(this)">
+                            <div>
+                                <span class="block font-bold text-slate-700">P-${d.fdf_number || d.pallet_number || d.id}</span>
+                                <span class="text-[9px] text-slate-400">${d.net_weight_kg} kg</span>
+                            </div>
+                        </label>
+                    `).join('');
+                    
+                    if (window.lucide) window.lucide.createIcons();
+                } else {
+                    palletContainer.classList.add('hidden');
+                    palletList.innerHTML = '';
+                }
+                
+                if (stock.fdf_numbers && stock.fdf_numbers.length > 0) {
+                    fdfHint.innerHTML = `<span class="text-blue-600 font-bold">Total Palet: ${stock.fdf_numbers.length}</span>`;
+                }
+                
             } else {
                 input.removeAttribute('max');
                 input.value = '';
+                input.readOnly = false;
                 hint.textContent = 'Maks: -';
-            }
-
-            // Show FDF/pallet info
-            if (fdfHint && fdf) {
-                fdfHint.innerHTML = `<span class="text-blue-600 font-bold">📦 Palet: ${fdf}</span>`;
-            } else if (fdfHint) {
                 fdfHint.textContent = '';
+                palletContainer.classList.add('hidden');
+                palletList.innerHTML = '';
             }
 
+            calculateTotal();
+        }
+
+        function recalcPalletWeight(checkbox) {
+            const row = checkbox.closest('.item-row');
+            const input = row.querySelector('.qty-input');
+            const checkboxes = row.querySelectorAll('.pallet-checkbox');
+            
+            let checkedWeight = 0;
+            let hasChecked = false;
+            
+            checkboxes.forEach(cb => {
+                if(cb.checked) {
+                    checkedWeight += parseFloat(cb.dataset.weight);
+                    hasChecked = true;
+                }
+            });
+
+            if (hasChecked) {
+                input.value = checkedWeight.toFixed(2);
+                input.readOnly = true; // Lock manual input if they are using pallets exactly
+                input.classList.add('bg-slate-100');
+            } else {
+                // Revert to max fallback
+                const select = row.querySelector('.stock-select');
+                const selectedStockId = select.value;
+                const stock = stocks.find(s => s.id == selectedStockId);
+                
+                if (stock) input.value = stock.remaining_weight.toFixed(2);
+                input.readOnly = false;
+                input.classList.remove('bg-slate-100');
+            }
+            
             calculateTotal();
         }
 
@@ -338,7 +400,8 @@
                     
                     // Get the latest row
                     const rows = container.querySelectorAll('.item-row');
-                    const row = rows[rows.length - 1];
+                    const rowIndex = rows.length - 1;
+                    const row = rows[rowIndex];
                     const select = row.querySelector('select');
                     const qtyInput = row.querySelector('.qty-input');
                     const hint = row.querySelector('.max-hint');
@@ -351,16 +414,24 @@
                         }
                     }
 
-                    // Set qty and max
-                    qtyInput.value = allocate.toFixed(2);
-                    qtyInput.max = stock.remaining_weight.toFixed(2);
-                    hint.textContent = `Maks: ${stock.remaining_weight.toLocaleString()} kg`;
-                    hint.classList.add('text-blue-500');
+                    // Trigger updateRowMax to render pallets
+                    updateRowMax(select, rowIndex);
 
-                    // Show FDF/palet info
-                    const fdfHint = row.querySelector('.fdf-hint');
-                    if (fdfHint && stock.fdf_numbers && stock.fdf_numbers.length > 0) {
-                        fdfHint.innerHTML = `<span class="text-blue-600 font-bold">📦 Palet: ${stock.fdf_numbers.join(', ')}</span>`;
+                    // Set qty manually (since it might be partial if total order < lot max)
+                    qtyInput.value = allocate.toFixed(2);
+                    
+                    // Mark checkboxes if it happens to be exactly some pallets
+                    const checkboxes = row.querySelectorAll('.pallet-checkbox');
+                    let tempWeight = 0;
+                    checkboxes.forEach(cb => {
+                        if (tempWeight + parseFloat(cb.dataset.weight) <= allocate) {
+                            cb.checked = true;
+                            tempWeight += parseFloat(cb.dataset.weight);
+                        }
+                    });
+                    
+                    if (tempWeight > 0) {
+                        recalcPalletWeight(checkboxes[0]);
                     }
 
                     // Mark row as FIFO recommended

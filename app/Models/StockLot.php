@@ -36,18 +36,10 @@ class StockLot extends Model
                 break;
 
             if ($detail->net_weight_kg >= $remainingToDeduct) {
-                // Cukup ambil dari satu detail ini
                 $detail->net_weight_kg -= $remainingToDeduct;
-                // Asumsi quantity unit berkurang proporsional atau manual? 
-                // Untuk simplifikasi saat ini kita kurangi berat saja, 
-                // idealnya unit juga dikurangi jika memungkinkan hitungannya.
-                // Disini kita biarkan unit tetap atau kurangi secara proporsional:
-                // $detail->quantity_unit = ... (Butuh input user atau rasio)
-
                 $detail->save();
                 $remainingToDeduct = 0;
             } else {
-                // Ambil semua dari detail ini
                 $remainingToDeduct -= $detail->net_weight_kg;
                 $detail->net_weight_kg = 0;
                 $detail->quantity_unit = 0; // Habis
@@ -55,13 +47,36 @@ class StockLot extends Model
             }
         }
 
-        // Update status Lot Utama
+        $this->updateStatusBasedOnRemainingStock();
+    }
+
+    /**
+     * Mengurangi stok dari lot ini berdasarkan Detail/Palet spesifik yang diplilih.
+     */
+    public function reduceStockByDetails(array $detailIds)
+    {
+        // Ambil detail yang spesifik dipilih dan masih punya sisa berat
+        $details = $this->details()->whereIn('id', $detailIds)->where('net_weight_kg', '>', 0)->get();
+
+        foreach ($details as $detail) {
+            // Karena palet diambil seluruhnya secara utuh (menurut konfirmasi)
+            $detail->net_weight_kg = 0;
+            $detail->quantity_unit = 0;
+            $detail->save();
+        }
+
+        $this->updateStatusBasedOnRemainingStock();
+    }
+
+    /**
+     * Abstraction untuk update status Lot.
+     */
+    protected function updateStatusBasedOnRemainingStock()
+    {
         $totalSisa = $this->details()->sum('net_weight_kg');
         if ($totalSisa <= 0) {
             $this->update(['status' => 'orange', 'outbound_at' => now()]);
         } else {
-            // Jika sebelumnya Blue (Penuh), ubah jadi Yellow (Partial)
-            // Jika sudah Yellow, tetap Yellow
             if ($this->status === 'blue') {
                 $this->update(['status' => 'yellow']);
             }
