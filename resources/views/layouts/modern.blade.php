@@ -1512,6 +1512,17 @@
             .status-chip span {
                 display: none;
             }
+
+            /* Fix Panel Notifikasi di Layar Kecil (Mobile) supaya tidak miring/kepotong */
+            .notif-panel {
+                position: fixed;
+                top: 60px;
+                right: 14px;
+                left: 14px;
+                width: auto;
+                max-width: none;
+                transform-origin: top;
+            }
         }
 
         /* ══════════════════════════════════════════
