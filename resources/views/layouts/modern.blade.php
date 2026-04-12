@@ -12,6 +12,7 @@
     <link rel="manifest" href="{{ asset('manifest.json') }}">
     <link rel="apple-touch-icon" href="{{ asset('images/logo-ptpn.png') }}">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="notif-api-url" content="{{ route('notifications.api') }}">
     <title>{{ config('app.name', 'PTPN 1 WMS') }} - @yield('title')</title>
 
     <!-- Fonts -->
@@ -613,9 +614,10 @@
             position: absolute;
             top: -3px;
             right: -3px;
-            width: 14px;
+            min-width: 14px;
             height: 14px;
-            border-radius: 50%;
+            border-radius: 7px;
+            padding: 0 3px;
             background: var(--orange);
             border: 2px solid var(--bg);
             display: flex;
@@ -631,6 +633,263 @@
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.15); }
         }
+
+        /* ══════════════════════════════════════════
+           NOTIFICATION DROPDOWN PANEL
+        ══════════════════════════════════════════ */
+        .notif-panel-wrap {
+            position: relative;
+        }
+
+        .notif-panel {
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            width: 340px;
+            max-height: 480px;
+            background: #fff;
+            border: 1px solid rgba(203, 213, 225, 0.6);
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.14), 0 4px 16px rgba(0,0,0,0.06);
+            z-index: 200;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transform-origin: top right;
+            animation: notifPanelIn 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+        }
+
+        @keyframes notifPanelIn {
+            from { opacity: 0; transform: scale(0.88) translateY(-8px); }
+            to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .notif-panel-header {
+            padding: 14px 16px 10px;
+            border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+            background: linear-gradient(to bottom, #f8fafc, #fff);
+        }
+
+        .notif-panel-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .notif-live-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--green);
+            animation: pulse 2s infinite;
+        }
+
+        .notif-panel-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 0;
+        }
+
+        .notif-item {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            padding: 10px 16px;
+            cursor: pointer;
+            transition: background 0.15s;
+            text-decoration: none;
+            color: inherit;
+            border-bottom: 1px solid rgba(241,245,249,0.9);
+        }
+
+        .notif-item:hover {
+            background: rgba(52, 168, 83, 0.04);
+        }
+
+        .notif-item:last-child {
+            border-bottom: none;
+        }
+
+        .notif-item-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 15px;
+        }
+
+        .notif-item-icon.warning { background: rgba(245, 166, 35, 0.12); }
+        .notif-item-icon.success { background: rgba(52, 168, 83, 0.12); }
+        .notif-item-icon.info    { background: rgba(74, 173, 228, 0.12); }
+
+        .notif-item-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .notif-item-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+            line-height: 1.3;
+        }
+
+        .notif-item-body {
+            font-size: 11px;
+            color: var(--text-muted);
+            line-height: 1.4;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .notif-item-time {
+            font-size: 10px;
+            color: #b0bec5;
+            margin-top: 3px;
+        }
+
+        .notif-empty {
+            padding: 32px 16px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        .notif-empty-icon {
+            font-size: 32px;
+            margin-bottom: 8px;
+            opacity: 0.4;
+        }
+
+        .notif-panel-footer {
+            padding: 10px 16px;
+            border-top: 1px solid rgba(226, 232, 240, 0.8);
+            text-align: center;
+            flex-shrink: 0;
+            background: linear-gradient(to top, #f8fafc, #fff);
+        }
+
+        .notif-panel-footer a {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--green);
+            text-decoration: none;
+        }
+
+        .notif-panel-footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* ══════════════════════════════════════════
+           IN-APP NOTIFICATION POPUP (WhatsApp-style)
+        ══════════════════════════════════════════ */
+        #notif-popup-container {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+
+        .notif-popup {
+            background: #0A1628;
+            border: 1px solid rgba(52, 168, 83, 0.3);
+            border-left: 4px solid var(--orange);
+            border-radius: 14px;
+            padding: 14px 16px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            min-width: 300px;
+            max-width: 360px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(52,168,83,0.08);
+            animation: notifPopupIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+            pointer-events: all;
+            cursor: pointer;
+        }
+
+        .notif-popup.success { border-left-color: var(--green); }
+        .notif-popup.info    { border-left-color: var(--blue); }
+
+        @keyframes notifPopupIn {
+            from { opacity: 0; transform: translateX(120px) scale(0.9); }
+            to   { opacity: 1; transform: translateX(0) scale(1); }
+        }
+
+        .notif-popup.hiding {
+            animation: notifPopupOut 0.35s ease forwards;
+        }
+
+        @keyframes notifPopupOut {
+            to { opacity: 0; transform: translateX(120px) scale(0.9); }
+        }
+
+        .notif-popup-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: rgba(245, 166, 35, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 18px;
+        }
+
+        .notif-popup.success .notif-popup-icon { background: rgba(52, 168, 83, 0.15); }
+        .notif-popup.info    .notif-popup-icon { background: rgba(74, 173, 228, 0.15); }
+
+        .notif-popup-content { flex: 1; min-width: 0; }
+
+        .notif-popup-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #e2e8f0;
+            margin-bottom: 3px;
+        }
+
+        .notif-popup-body {
+            font-size: 11px;
+            color: #5f7d96;
+            line-height: 1.4;
+        }
+
+        .notif-popup-app {
+            font-size: 9px;
+            color: #3b5268;
+            margin-bottom: 5px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .notif-popup-close {
+            background: none;
+            border: none;
+            color: #3b5268;
+            cursor: pointer;
+            padding: 2px;
+            flex-shrink: 0;
+            line-height: 1;
+            font-size: 14px;
+        }
+
+        .notif-popup-close:hover { color: #8aa6bb; }
 
         .status-chip {
             display: flex;
@@ -2098,16 +2357,38 @@
                 </div>
                 <!-- Notification bell + User avatar (disembunyikan di HP kecil via CSS) -->
                 <div class="topbar-extras" style="display:flex;align-items:center;gap:10px;">
-                    @php
-                        $pendingShipmentsCount = \App\Models\Shipment::where('status', 'draft')->count();
-                        $notifLink = Auth::user()->role === 'operator' ? route('shipments.verification') : route('shipments.index');
-                    @endphp
-                    <a href="{{ $notifLink }}" class="topbar-icon-btn">
-                        <i data-lucide="bell" style="width:16px;height:16px;"></i>
-                        @if($pendingShipmentsCount > 0)
-                            <span class="notif-badge">{{ $pendingShipmentsCount }}</span>
-                        @endif
-                    </a>
+                    <!-- Notification Bell Dropdown -->
+                    <div class="notif-panel-wrap" id="notif-panel-wrap">
+                        <button id="notif-bell-btn" class="topbar-icon-btn" onclick="toggleNotifPanel()" title="Notifikasi" style="position:relative;">
+                            <i data-lucide="bell" style="width:16px;height:16px;"></i>
+                            <span class="notif-badge" id="notif-badge-count" style="display:none;">0</span>
+                        </button>
+
+                        <!-- Notification Dropdown Panel -->
+                        <div class="notif-panel" id="notif-panel" style="display:none;">
+                            <div class="notif-panel-header">
+                                <div class="notif-panel-title">
+                                    <div class="notif-live-dot"></div>
+                                    Notifikasi
+                                </div>
+                                <span id="notif-panel-count" style="font-size:11px;font-weight:600;color:var(--text-muted);">Memuat...</span>
+                            </div>
+                            <div class="notif-panel-body" id="notif-panel-body">
+                                <div class="notif-empty">
+                                    <div class="notif-empty-icon">🔔</div>
+                                    <div>Memuat notifikasi...</div>
+                                </div>
+                            </div>
+                            <div class="notif-panel-footer">
+                                @if(Auth::user()->role === 'operator')
+                                    <a href="{{ route('shipments.verification') }}">Lihat Semua Verifikasi →</a>
+                                @else
+                                    <a href="{{ route('shipments.index') }}">Lihat Semua Pengiriman →</a>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+
                     <div
                         style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--green),var(--blue));display:flex;align-items:center;justify-content:center;color:white;font-size:12px;font-weight:700;box-shadow:0 2px 8px rgba(52,168,83,0.3);">
                         {{ substr(Auth::user()->name, 0, 1) }}
@@ -2168,6 +2449,9 @@
 
     <!-- Toast Container -->
     <div id="toast-container"></div>
+
+    <!-- In-App Notification Popup Container -->
+    <div id="notif-popup-container"></div>
 
     <!-- PWA Install Banner -->
     <div id="pwa-banner" class="hidden">
@@ -2297,6 +2581,155 @@
         // ── Lucide icons ─────────────────────────────
         lucide.createIcons();
 
+        // ══════════════════════════════════════════
+        // NOTIFICATION SYSTEM
+        // ══════════════════════════════════════════
+        let notifPanelOpen = false;
+        let lastNotifCount  = -1;   // -1 = first load
+        let lastNotifIds    = new Set();
+        const notifIcons = { warning: '🚨', success: '✅', info: '⏳' };
+
+        function toggleNotifPanel() {
+            const panel = document.getElementById('notif-panel');
+            notifPanelOpen = !notifPanelOpen;
+            panel.style.display = notifPanelOpen ? 'flex' : 'none';
+            if (notifPanelOpen) fetchNotifications();
+        }
+
+        // Close panel when clicking outside
+        document.addEventListener('click', function(e) {
+            const wrap = document.getElementById('notif-panel-wrap');
+            if (wrap && !wrap.contains(e.target) && notifPanelOpen) {
+                document.getElementById('notif-panel').style.display = 'none';
+                notifPanelOpen = false;
+            }
+        });
+
+        function fetchNotifications() {
+            const apiURL = document.querySelector('meta[name="notif-api-url"]').getAttribute('content');
+            fetch(apiURL, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            })
+            .then(r => r.json())
+            .then(data => {
+                updateNotifBadge(data.count);
+                updateNotifPanel(data.notifications);
+                checkForNewNotifs(data);
+            })
+            .catch(err => console.warn('Notification fetch failed:', err));
+        }
+
+        function updateNotifBadge(count) {
+            const badge = document.getElementById('notif-badge-count');
+            if (!badge) return;
+            if (count > 0) {
+                badge.style.display = 'flex';
+                badge.textContent = count > 9 ? '9+' : count;
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        function updateNotifPanel(notifs) {
+            const body   = document.getElementById('notif-panel-body');
+            const header = document.getElementById('notif-panel-count');
+            if (!body || !header) return;
+
+            header.textContent = notifs.length > 0
+                ? notifs.length + ' notifikasi'
+                : 'Tidak ada notifikasi';
+
+            if (notifs.length === 0) {
+                body.innerHTML = `
+                    <div class="notif-empty">
+                        <div class="notif-empty-icon">✨</div>
+                        <div style="font-weight:600;color:var(--text-secondary);margin-bottom:4px;">Semua Clear!</div>
+                        <div>Tidak ada notifikasi aktif saat ini.</div>
+                    </div>`;
+                return;
+            }
+
+            body.innerHTML = notifs.map(n => `
+                <a href="${n.url}" class="notif-item">
+                    <div class="notif-item-icon ${n.type}">${notifIcons[n.type] || '🔔'}</div>
+                    <div class="notif-item-content">
+                        <div class="notif-item-title">${n.title}</div>
+                        <div class="notif-item-body">${n.body}</div>
+                        <div class="notif-item-time">${n.time}</div>
+                    </div>
+                </a>`
+            ).join('');
+        }
+
+        function checkForNewNotifs(data) {
+            const newIds = new Set(data.notifications.map(n => n.id));
+
+            // On first load, just save state
+            if (lastNotifCount === -1) {
+                lastNotifCount = data.count;
+                lastNotifIds   = newIds;
+                return;
+            }
+
+            // Find truly new notifications
+            const brandNew = data.notifications.filter(n => !lastNotifIds.has(n.id));
+
+            // Show popup for each new notification
+            brandNew.forEach((n, i) => {
+                setTimeout(() => showNotifPopup(n), i * 600);
+            });
+
+            // If count just increased and panel is closed, show first
+            if (data.count > lastNotifCount && brandNew.length === 0 && !notifPanelOpen) {
+                const newest = data.notifications[0];
+                if (newest) showNotifPopup(newest);
+            }
+
+            lastNotifCount = data.count;
+            lastNotifIds   = newIds;
+        }
+
+        function showNotifPopup(notif) {
+            const container = document.getElementById('notif-popup-container');
+            if (!container) return;
+
+            const el = document.createElement('div');
+            el.className = `notif-popup ${notif.type}`;
+            el.innerHTML = `
+                <div class="notif-popup-icon">${notifIcons[notif.type] || '🔔'}</div>
+                <div class="notif-popup-content">
+                    <div class="notif-popup-app">PTPN 1 WMS</div>
+                    <div class="notif-popup-title">${notif.title}</div>
+                    <div class="notif-popup-body">${notif.body}</div>
+                </div>
+                <button class="notif-popup-close" onclick="dismissNotifPopup(this.parentElement)" title="Tutup">✕</button>`;
+
+            el.addEventListener('click', function(e) {
+                if (e.target.classList.contains('notif-popup-close')) return;
+                window.location.href = notif.url;
+            });
+
+            container.prepend(el);
+
+            // Auto-dismiss after 8 seconds
+            setTimeout(() => dismissNotifPopup(el), 8000);
+        }
+
+        function dismissNotifPopup(el) {
+            if (!el || !el.parentElement) return;
+            el.classList.add('hiding');
+            el.addEventListener('animationend', () => el.remove(), { once: true });
+        }
+
+        // Initial fetch + polling every 30s
+        document.addEventListener('DOMContentLoaded', function() {
+            fetchNotifications();
+            setInterval(fetchNotifications, 30000);
+        });
+
         // ── Live clock ──────────────────────────────
         function updateClock() {
             const el = document.getElementById('live-clock');
@@ -2368,7 +2801,7 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
+                navigator.serviceWorker.register('{{ asset("sw.js") }}')
                     .then(registration => {
                         console.log('SW registered:', registration.scope);
                         initPush();

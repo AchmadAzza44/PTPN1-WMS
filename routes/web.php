@@ -33,6 +33,9 @@ Route::middleware(['auth'])->group(function () {
     // Web Push Subscriptions
     Route::post('/push-subscribe', [\App\Http\Controllers\PushSubscriptionController::class, 'store'])->name('push.subscribe');
 
+    // In-App Notification API (polling)
+    Route::get('/notifications/api', [\App\Http\Controllers\NotificationController::class, 'index'])->name('notifications.api');
+
     // ╔══════════════════════════════════════════════════════════╗
     // ║  SHARED: Semua role (admin, operator, manager)          ║
     // ╚══════════════════════════════════════════════════════════╝

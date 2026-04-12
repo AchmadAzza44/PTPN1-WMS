@@ -26,7 +26,8 @@ class Shipment extends Model
 
     protected $casts = [
         'vehicle_checklist' => 'array',
-        'dispatched_at' => 'datetime',
+        'dispatched_at'     => 'datetime',
+        'verified_at'       => 'datetime',
     ];
 
     public function items()
