@@ -15,12 +15,18 @@
             <p style="font-size: 13px; color: #64748b; margin: 0 0 24px 0;">Rekapitulasi stok masuk, keluar, dan sisa
                 per hari ini.</p>
 
-            <a href="{{ route('report.daily.pdf') }}" target="_blank" class="bg-green-gradient shadow-green"
-                style="display: flex; align-items: center; justify-content: center; width: 100%; padding: 10px 16px; color: white; font-weight: 700; border-radius: 12px; text-decoration: none; font-size: 13px; gap: 8px; transition: all 0.2s;"
-                onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
-                <i data-lucide="download" style="width: 16px; height: 16px;"></i>
-                Download PDF
-            </a>
+            <form action="{{ route('report.daily.pdf') }}" method="GET" target="_blank" style="display: flex; flex-direction: column; gap: 12px;">
+                <div>
+                    <label for="date" class="block text-xs font-semibold text-slate-500 mb-1">Pilih Tanggal</label>
+                    <input type="date" id="date" name="date" value="{{ date('Y-m-d') }}" class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-ptpn-green/50" required>
+                </div>
+                <button type="submit" class="bg-green-gradient shadow-green"
+                    style="display: flex; align-items: center; justify-content: center; width: 100%; padding: 10px 16px; color: white; font-weight: 700; border-radius: 12px; border: none; cursor: pointer; text-decoration: none; font-size: 13px; gap: 8px; transition: all 0.2s;"
+                    onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                    <i data-lucide="download" style="width: 16px; height: 16px;"></i>
+                    Download PDF
+                </button>
+            </form>
         </div>
 
         <!-- Real-Time Dashboard Card -->
