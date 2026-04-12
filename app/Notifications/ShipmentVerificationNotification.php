@@ -2,15 +2,14 @@
 
 namespace App\Notifications;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
+// Removed Queueable - send synchronously for reliability
 use Illuminate\Notifications\Notification;
 use NotificationChannels\WebPush\WebPushMessage;
 use NotificationChannels\WebPush\WebPushChannel;
 
 class ShipmentVerificationNotification extends Notification
 {
-    use Queueable;
+    // No queue - sent synchronously
 
     protected $shipment;
 

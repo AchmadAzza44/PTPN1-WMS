@@ -2705,7 +2705,10 @@
             // Find truly new notifications
             const brandNew = data.notifications.filter(n => !lastNotifIds.has(n.id));
 
-            // Show popup for each new notification
+            // Show popup + play sound for each new notification
+            if (brandNew.length > 0) {
+                playNotifSound();
+            }
             brandNew.forEach((n, i) => {
                 setTimeout(() => showNotifPopup(n), i * 600);
             });
@@ -2751,11 +2754,60 @@
             el.classList.add('hiding');
             el.addEventListener('animationend', () => el.remove(), { once: true });
         }
+        // ── Notification Sound (Web Audio API) ──────
+        function playNotifSound() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // First tone (ding)
+                const osc1 = ctx.createOscillator();
+                const gain1 = ctx.createGain();
+                osc1.connect(gain1);
+                gain1.connect(ctx.destination);
+                osc1.type = 'sine';
+                osc1.frequency.setValueAtTime(830, ctx.currentTime);
+                gain1.gain.setValueAtTime(0.3, ctx.currentTime);
+                gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+                osc1.start(ctx.currentTime);
+                osc1.stop(ctx.currentTime + 0.4);
 
-        // Initial fetch + polling every 30s
+                // Second tone (dong) - slightly lower, delayed
+                const osc2 = ctx.createOscillator();
+                const gain2 = ctx.createGain();
+                osc2.connect(gain2);
+                gain2.connect(ctx.destination);
+                osc2.type = 'sine';
+                osc2.frequency.setValueAtTime(660, ctx.currentTime + 0.15);
+                gain2.gain.setValueAtTime(0, ctx.currentTime);
+                gain2.gain.setValueAtTime(0.25, ctx.currentTime + 0.15);
+                gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
+                osc2.start(ctx.currentTime + 0.15);
+                osc2.stop(ctx.currentTime + 0.6);
+
+                // Third tone (higher ding)
+                const osc3 = ctx.createOscillator();
+                const gain3 = ctx.createGain();
+                osc3.connect(gain3);
+                gain3.connect(ctx.destination);
+                osc3.type = 'sine';
+                osc3.frequency.setValueAtTime(990, ctx.currentTime + 0.35);
+                gain3.gain.setValueAtTime(0, ctx.currentTime);
+                gain3.gain.setValueAtTime(0.2, ctx.currentTime + 0.35);
+                gain3.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.8);
+                osc3.start(ctx.currentTime + 0.35);
+                osc3.stop(ctx.currentTime + 0.8);
+
+                // Cleanup
+                setTimeout(() => ctx.close(), 1500);
+            } catch (e) {
+                console.warn('Audio notification failed:', e);
+            }
+        }
+
+        // Initial fetch + polling every 15s
         document.addEventListener('DOMContentLoaded', function() {
             fetchNotifications();
-            setInterval(fetchNotifications, 30000);
+            setInterval(fetchNotifications, 15000);
         });
 
         // ── Live clock ──────────────────────────────
