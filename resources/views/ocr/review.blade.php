@@ -99,23 +99,147 @@
     @endphp
 
     <style>
-        /* ═══ DESKTOP LAYOUT ═══ */
+        /* ═══════════════════════════════════════════════════
+           REVIEW PAGE — FULLY RESPONSIVE LAYOUT SYSTEM
+           Breakpoints:
+             • ≤480px  — Small phone (portrait)
+             • 481–640px — Large phone / phone landscape
+             • 641–768px — Small tablet portrait
+             • 769–1024px — Tablet landscape / small laptop
+             • 1025–1280px — Laptop / small desktop
+             • >1280px — Desktop / wide
+        ═══════════════════════════════════════════════════ */
+
+        /* ── Base / Desktop (>1024px) ── */
         .review-main-grid {
             display: grid;
             grid-template-columns: {{ $imageUrl ? '2fr 3fr' : '1fr' }};
-            gap: 24px;
+            gap: clamp(16px, 2vw, 28px);
             align-items: start;
         }
         .review-main-grid > * { min-width: 0; }
-        .review-left-col { display: flex; flex-direction: column; gap: 16px; position: sticky; top: 24px; }
-        .review-fields-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .review-actions { display: flex; gap: 10px; justify-content: flex-end; }
 
-        /* ═══ MOBILE: Sticky Photo Header + Scrollable Form ═══ */
+        .review-left-col {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            position: sticky;
+            top: 24px;
+        }
+
+        .review-fields-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: clamp(8px, 1.5vw, 14px);
+        }
+
+        .review-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+        }
+
+        /* ── Zoom Overlay (all devices) ── */
+        .zoom-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 200;
+            background: rgba(15,23,42,0.88);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            align-items: center;
+            justify-content: center;
+            cursor: zoom-out;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
+        .zoom-overlay.active { display: flex; }
+        .zoom-overlay img {
+            max-width: 95vw;
+            max-height: 92vh;
+            object-fit: contain;
+            border-radius: 12px;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+        }
+        /* Close hint on zoom */
+        .zoom-overlay::after {
+            content: '✕ Tap untuk tutup';
+            position: fixed;
+            top: max(16px, env(safe-area-inset-top, 16px));
+            right: max(16px, env(safe-area-inset-right, 16px));
+            padding: 6px 14px;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.15);
+            color: rgba(255,255,255,0.8);
+            font-size: 11px;
+            font-weight: 600;
+            backdrop-filter: blur(8px);
+            pointer-events: none;
+        }
+
+        /* ── FAB Photo Toggle (hidden on desktop) ── */
+        .fab-photo-toggle {
+            display: none;
+            position: fixed;
+            bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+            right: max(16px, env(safe-area-inset-right, 16px));
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            background: {{ $hex }};
+            color: white;
+            border: none;
+            box-shadow: 0 4px 16px {{ $hexAlpha }}0.35);
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 99;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .fab-photo-toggle:active { transform: scale(0.92); }
+
+        /* ── Mobile-only elements (hidden on desktop by default) ── */
+        .mobile-collapse-btn { display: none !important; }
+        .mobile-mini-bar { display: none !important; }
+
+        /* ── Photo container base styles ── */
+        .mobile-photo-wrap {
+            overflow: hidden;
+            transition: max-height 0.35s cubic-bezier(0.4,0,0.2,1);
+            position: relative;
+        }
+
+        /* ═══════════════════════════════════════════
+           TABLET LANDSCAPE / SMALL LAPTOP (769–1024px)
+           Keep 2-col grid but narrower, fields still 2-col
+        ═══════════════════════════════════════════ */
+        @media (max-width: 1024px) and (min-width: 769px) {
+            .review-main-grid {
+                grid-template-columns: {{ $imageUrl ? '1fr 1fr' : '1fr' }};
+                gap: 16px;
+            }
+            .review-left-col {
+                position: sticky;
+                top: 16px;
+            }
+            .review-fields-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
+        }
+
+        /* ═══════════════════════════════════════════
+           TABLET PORTRAIT & BELOW (≤768px)
+           Switch to single-column stacked layout
+        ═══════════════════════════════════════════ */
         @media (max-width: 768px) {
-            .review-main-grid { display: flex !important; flex-direction: column !important; gap: 0 !important; }
+            .review-main-grid {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 0 !important;
+            }
 
-            /* Sticky photo header */
+            /* === Sticky photo header === */
             .review-left-col {
                 position: sticky !important;
                 top: 0;
@@ -127,40 +251,43 @@
                 gap: 0 !important;
                 transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
             }
-            .review-left-col.collapsed {
-                padding: 0;
+            .review-left-col.collapsed { padding: 0; }
+            .review-left-col .card-premium {
+                margin: 0 !important;
+                border-radius: 0 !important;
+                border-top: none !important;
             }
-            .review-left-col .card-premium { margin: 0 !important; border-radius: 0 !important; border-top: none !important; }
             .review-left-col .doc-info-bar { display: none; }
             .review-left-col .error-bar-desktop { display: none; }
 
-            /* Photo container mobile */
-            .mobile-photo-wrap {
-                max-height: 35vh;
-                overflow: hidden;
-                transition: max-height 0.35s cubic-bezier(0.4,0,0.2,1);
-                position: relative;
-            }
+            /* === Photo container === */
+            .mobile-photo-wrap { max-height: 35vh; }
             .mobile-photo-wrap.collapsed { max-height: 0; }
             .mobile-photo-wrap img { max-height: 35vh !important; object-fit: contain; }
 
-            /* Mini preview bar when collapsed */
+            /* === Mini preview bar (collapsed state) === */
             .mobile-mini-bar {
-                display: none;
+                display: none !important;
                 align-items: center;
                 gap: 10px;
                 padding: 8px 14px;
                 background: rgba(248,250,252,0.95);
                 backdrop-filter: blur(8px);
+                -webkit-backdrop-filter: blur(8px);
                 border-bottom: 1px solid var(--border, #e2e8f0);
                 cursor: pointer;
             }
-            .mobile-mini-bar.visible { display: flex; }
-            .mobile-mini-bar img { width: 48px; height: 48px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border, #e2e8f0); }
+            .mobile-mini-bar.visible { display: flex !important; }
+            .mobile-mini-bar img {
+                width: 48px; height: 48px;
+                object-fit: cover;
+                border-radius: 8px;
+                border: 1px solid var(--border, #e2e8f0);
+            }
 
-            /* Toggle collapse button */
+            /* === Collapse toggle button === */
             .mobile-collapse-btn {
-                display: flex;
+                display: flex !important;
                 align-items: center;
                 justify-content: center;
                 gap: 6px;
@@ -178,65 +305,203 @@
             .mobile-collapse-btn i { transition: transform 0.35s; }
             .mobile-collapse-btn.flipped i { transform: rotate(180deg); }
 
-            /* Form scrolls below */
+            /* === Form area === */
             .review-right-col { order: 2; padding-top: 12px; }
-            .review-fields-grid { grid-template-columns: 1fr !important; }
-            .review-fields-grid > div { grid-column: auto !important; }
-            .review-actions { flex-direction: column-reverse; gap: 8px; }
-            .review-actions a, .review-actions button {
+
+            /* FAB visible */
+            .fab-photo-toggle { display: flex; }
+
+            /* Actions stack on small screens */
+            .review-actions {
+                flex-direction: column-reverse;
+                gap: 8px;
+            }
+            .review-actions a,
+            .review-actions button {
                 width: 100% !important;
                 justify-content: center !important;
             }
         }
 
-        /* Floating photo toggle (mobile only) */
-        .fab-photo-toggle {
-            display: none;
-            position: fixed;
-            bottom: 24px;
-            right: 20px;
-            width: 48px; height: 48px;
-            border-radius: 50%;
-            background: {{ $hex }};
-            color: white;
-            border: none;
-            box-shadow: 0 4px 16px {{ $hexAlpha }}0.35);
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            z-index: 99;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .fab-photo-toggle:active { transform: scale(0.92); }
-        @media (max-width: 768px) {
-            .fab-photo-toggle { display: flex; }
+        /* ═══════════════════════════════════════════
+           SMALL TABLET (641–768px)
+           Fields stay 2-col on wider tablets
+        ═══════════════════════════════════════════ */
+        @media (max-width: 768px) and (min-width: 641px) {
+            .review-fields-grid {
+                grid-template-columns: 1fr 1fr !important;
+                gap: 10px;
+            }
+            /* Full-span fields still span 2 cols */
+            .review-fields-grid > div[style*="grid-column:1/-1"] {
+                grid-column: 1 / -1 !important;
+            }
+            .mobile-photo-wrap { max-height: 30vh; }
+            .mobile-photo-wrap img { max-height: 30vh !important; }
+
+            /* Actions side by side on tablet */
+            .review-actions {
+                flex-direction: row !important;
+                justify-content: flex-end;
+            }
+            .review-actions a,
+            .review-actions button {
+                width: auto !important;
+            }
         }
 
-        /* ═══ Zoom overlay ═══ */
-        .zoom-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            z-index: 200;
-            background: rgba(15,23,42,0.85);
-            backdrop-filter: blur(4px);
-            align-items: center;
-            justify-content: center;
-            cursor: zoom-out;
-        }
-        .zoom-overlay.active { display: flex; }
-        .zoom-overlay img {
-            max-width: 95vw;
-            max-height: 92vh;
-            object-fit: contain;
-            border-radius: 12px;
-            box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+        /* ═══════════════════════════════════════════
+           LARGE PHONE (481–640px)
+           Fields single column, slightly more padding
+        ═══════════════════════════════════════════ */
+        @media (max-width: 640px) and (min-width: 481px) {
+            .review-fields-grid {
+                grid-template-columns: 1fr !important;
+            }
+            .review-fields-grid > div { grid-column: auto !important; }
+            .mobile-photo-wrap { max-height: 28vh; }
+            .mobile-photo-wrap img { max-height: 28vh !important; }
+
+            /* Bottom FAB position adjusted for bottom nav */
+            .fab-photo-toggle {
+                bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+            }
         }
 
-        /* Desktop hides mobile-only elements */
-        @media (min-width: 769px) {
-            .mobile-collapse-btn { display: none !important; }
-            .mobile-mini-bar { display: none !important; }
+        /* ═══════════════════════════════════════════
+           SMALL PHONE (≤480px)
+           Maximum compactness, everything single col
+        ═══════════════════════════════════════════ */
+        @media (max-width: 480px) {
+            .review-fields-grid {
+                grid-template-columns: 1fr !important;
+                gap: 8px;
+            }
+            .review-fields-grid > div { grid-column: auto !important; }
+
+            .mobile-photo-wrap { max-height: 25vh; }
+            .mobile-photo-wrap img { max-height: 25vh !important; }
+
+            .mobile-mini-bar img { width: 40px; height: 40px; }
+
+            /* Tighter card padding on tiny screens */
+            .review-right-col .card-premium.p-5 { padding: 14px !important; }
+            .review-right-col .card-premium .review-fields-grid input,
+            .review-right-col .card-premium .review-fields-grid textarea {
+                font-size: 14px; /* Bigger touch targets */
+                padding: 10px 12px;
+            }
+
+            /* Form header compact */
+            .review-right-col .card-premium h3 { font-size: 13px !important; }
+
+            /* Bottom FAB position adjusted for bottom nav */
+            .fab-photo-toggle {
+                bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+                right: 14px;
+                width: 44px; height: 44px;
+            }
+
+            /* Zoom overlay full bleed on small phones */
+            .zoom-overlay img {
+                max-width: 100vw;
+                max-height: 100vh;
+                border-radius: 0;
+            }
+            .zoom-overlay { background: rgba(0,0,0,0.95); }
+        }
+
+        /* ═══════════════════════════════════════════
+           VERY SMALL PHONE (≤360px — SE, Galaxy Fold, etc.)
+        ═══════════════════════════════════════════ */
+        @media (max-width: 360px) {
+            .review-right-col .card-premium.p-5 { padding: 10px !important; }
+            .review-right-col .card-premium h3 { font-size: 12px !important; }
+            .review-right-col .card-premium p { font-size: 10px !important; }
+            .review-fields-grid { gap: 6px; }
+
+            .mobile-photo-wrap { max-height: 20vh; }
+            .mobile-photo-wrap img { max-height: 20vh !important; }
+
+            .mobile-mini-bar { padding: 6px 10px; }
+            .mobile-mini-bar img { width: 36px; height: 36px; }
+        }
+
+        /* ═══════════════════════════════════════════
+           WIDE DESKTOP (>1280px)
+           More generous spacing, wider left column
+        ═══════════════════════════════════════════ */
+        @media (min-width: 1281px) {
+            .review-main-grid {
+                grid-template-columns: {{ $imageUrl ? '2fr 3fr' : '1fr' }};
+                gap: 32px;
+            }
+            .review-left-col { top: 28px; }
+        }
+
+        /* ═══════════════════════════════════════════
+           LANDSCAPE PHONE ORIENTATION
+           Give more horizontal space to form
+        ═══════════════════════════════════════════ */
+        @media (max-width: 768px) and (orientation: landscape) {
+            .mobile-photo-wrap { max-height: 40vh; }
+            .mobile-photo-wrap img { max-height: 40vh !important; }
+
+            .review-fields-grid {
+                grid-template-columns: 1fr 1fr !important;
+            }
+            /* Full-span fields still span 2 cols in landscape */
+            .review-fields-grid > div[style*="grid-column:1/-1"] {
+                grid-column: 1 / -1 !important;
+            }
+
+            /* Side-by-side actions in landscape */
+            .review-actions {
+                flex-direction: row !important;
+                justify-content: flex-end;
+            }
+            .review-actions a,
+            .review-actions button {
+                width: auto !important;
+            }
+        }
+
+        /* ═══════════════════════════════════════════
+           TABLE RESPONSIVE (lot detail tables)
+        ═══════════════════════════════════════════ */
+        @media (max-width: 640px) {
+            .review-right-col table { font-size: 12px; }
+            .review-right-col table th { font-size: 9px; padding: 6px 6px; }
+            .review-right-col table td { padding: 5px 6px; }
+            .review-right-col table .td-input { font-size: 12px; padding: 5px 6px; }
+        }
+
+        @media (max-width: 480px) {
+            .review-right-col table { min-width: 420px !important; }
+        }
+
+        /* ═══════════════════════════════════════════
+           SAFE AREA (notched phones)
+        ═══════════════════════════════════════════ */
+        @supports (padding: env(safe-area-inset-bottom)) {
+            @media (max-width: 768px) {
+                .review-actions {
+                    padding-bottom: env(safe-area-inset-bottom, 0px);
+                }
+            }
+        }
+
+        /* ═══════════════════════════════════════════
+           PRINT — clean up for printing
+        ═══════════════════════════════════════════ */
+        @media print {
+            .review-main-grid { display: block !important; }
+            .review-left-col { position: static !important; page-break-after: always; }
+            .fab-photo-toggle,
+            .mobile-collapse-btn,
+            .mobile-mini-bar,
+            .zoom-overlay { display: none !important; }
+            .review-actions { page-break-inside: avoid; }
         }
     </style>
     {{-- ═══ ZOOM OVERLAY (fullscreen photo viewer) ═══ --}}
