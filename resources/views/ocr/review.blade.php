@@ -761,9 +761,8 @@
                         <table style="width:100%;min-width:620px;border-collapse:collapse;font-size:13px;" id="tabelBaris">
                                 <thead>
                                     <tr style="background:rgba(248,250,252,0.9);">
-                                        <th style="padding:8px 8px;text-align:left;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);min-width:85px;">Peti/Lot</th>
+                                        <th style="padding:8px 8px;text-align:left;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);min-width:85px;">No. Peti/ Palet</th>
                                         <th style="padding:8px 8px;text-align:left;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);min-width:80px;">No. Lot</th>
-                                        <th style="padding:8px 8px;text-align:left;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);min-width:80px;">No. Palet</th>
                                         <th style="padding:8px 8px;text-align:left;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);min-width:60px;">Bale</th>
                                         <th style="padding:8px 8px;text-align:left;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);min-width:90px;">Berat (kg)</th>
                                         <th style="padding:8px 6px;text-align:center;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);width:44px;">Hapus</th>
@@ -772,12 +771,10 @@
                                 <tbody id="barisTbody">
                                     @forelse($baris as $i => $b)
                                         <tr data-idx="{{ $i }}" style="border-bottom:1px solid var(--border);">
-                                            <td style="padding:5px 6px;" data-label="Peti/Lot"><input type="text" name="hasil[baris][{{ $i }}][no_peti]"
-                                                    value="{{ $b['no_peti'] ?? '' }}" class="td-input" placeholder="No. Peti"></td>
+                                            <td style="padding:5px 6px;" data-label="No. Peti/ Palet"><input type="text" name="hasil[baris][{{ $i }}][no_peti]"
+                                                    value="{{ $b['no_peti'] ?? '' }}" class="td-input" placeholder="No. Peti/ Palet"></td>
                                             <td style="padding:5px 6px;" data-label="No. Lot"><input type="text" name="hasil[baris][{{ $i }}][no_lot]"
                                                     value="{{ $b['no_lot'] ?? '' }}" class="td-input" placeholder="No. Lot"></td>
-                                            <td style="padding:5px 6px;" data-label="No. Palet"><input type="text" name="hasil[baris][{{ $i }}][no_palet]"
-                                                    value="{{ $b['no_palet'] ?? '' }}" class="td-input" placeholder="No. Palet"></td>
                                             <td style="padding:5px 6px;" data-label="Bale"><input type="number" name="hasil[baris][{{ $i }}][jml_bale]"
                                                     value="{{ $b['jml_bale'] ?? '' }}" class="td-input" placeholder="0"></td>
                                             <td style="padding:5px 6px;" data-label="Berat"><input type="number" name="hasil[baris][{{ $i }}][berat_kg]"
@@ -998,9 +995,8 @@
             const tr = document.createElement('tr');
             tr.style.borderBottom = '1px solid var(--border)';
             tr.innerHTML = `
-            <td style="padding:5px 6px;" data-label="Peti/Lot"><input type="text"   name="hasil[baris][${i}][no_peti]"   class="td-input" placeholder="No. Peti"></td>
+            <td style="padding:5px 6px;" data-label="No. Peti/ Palet"><input type="text"   name="hasil[baris][${i}][no_peti]"   class="td-input" placeholder="No. Peti/ Palet"></td>
             <td style="padding:5px 6px;" data-label="No. Lot"><input type="text"   name="hasil[baris][${i}][no_lot]"    class="td-input" placeholder="No. Lot"></td>
-            <td style="padding:5px 6px;" data-label="No. Palet"><input type="text"   name="hasil[baris][${i}][no_palet]"  class="td-input" placeholder="No. Palet"></td>
             <td style="padding:5px 6px;" data-label="Bale"><input type="number" name="hasil[baris][${i}][jml_bale]"  class="td-input" placeholder="0"></td>
             <td style="padding:5px 6px;" data-label="Berat"><input type="number" name="hasil[baris][${i}][berat_kg]"  class="td-input" step="0.01" placeholder="0"></td>
             <td style="padding:5px 4px;text-align:center;" data-label=""><button type="button" onclick="hapusBaris(this)" style="padding:4px 8px;border-radius:6px;background:rgba(239,68,68,0.08);color:#ef4444;border:none;cursor:pointer;font-size:11px;">✕ Hapus</button></td>
