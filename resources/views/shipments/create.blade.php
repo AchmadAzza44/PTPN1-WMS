@@ -91,6 +91,39 @@
                             </div>
                         </div>
 
+                        <div class="mt-6 pt-5 border-t border-slate-100 space-y-4">
+                            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center">
+                                <i data-lucide="truck" class="w-4 h-4 mr-2"></i>
+                                Data Angkutan (Bisa diisi oleh Petugas Gudang)
+                            </h4>
+                            
+                            <!-- Ekspedisi -->
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Nama Ekspedisi</label>
+                                <input type="text" name="transporter_name" value="{{ $preFill['transporter_name'] ?? '' }}"
+                                    placeholder="Contoh: PT. Sumber Makmur"
+                                    class="block w-full border-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-lg shadow-sm bg-white text-sm">
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <!-- No Polisi -->
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">No. Polisi</label>
+                                    <input type="text" name="vehicle_plate" value="{{ $preFill['vehicle_plate'] ?? '' }}"
+                                        placeholder="Contoh: BE 1234 XY"
+                                        class="block w-full border-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-lg shadow-sm bg-white text-sm uppercase">
+                                </div>
+
+                                <!-- Nama Supir -->
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Nama Supir</label>
+                                    <input type="text" name="driver_name" value="{{ $preFill['driver_name'] ?? '' }}"
+                                        placeholder="Nama Lengkap"
+                                        class="block w-full border-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-lg shadow-sm bg-white text-sm">
+                                </div>
+                            </div>
+                        </div>
+
                         <p class="text-[10px] text-slate-400 mt-4 italic">* Anda dapat mengirim secara parsial (sebagian). Sisa pesanan akan dicatat untuk pengiriman selanjutnya.</p>
                     </div>
                 </div>

@@ -159,6 +159,23 @@
                                     value="{{ $shipment->documented_qty_kg ?? 0 }}"
                                     class="block w-full border-slate-200 rounded-lg text-sm bg-blue-50 focus:ring-blue-500 focus:border-blue-500 font-mono">
                             </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase">Perusahaan Ekspedisi</label>
+                                <input type="text" name="transporter_name" value="{{ $shipment->transporter_name !== '-' ? $shipment->transporter_name : '' }}"
+                                    class="block w-full border-slate-200 rounded-lg text-sm bg-blue-50 focus:ring-blue-500 focus:border-blue-500 mb-2">
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 uppercase">No. Polisi (Plat)</label>
+                                    <input type="text" name="vehicle_plate" value="{{ $shipment->vehicle_plate !== '-' ? $shipment->vehicle_plate : '' }}"
+                                        class="block w-full border-slate-200 rounded-lg text-sm bg-blue-50 focus:ring-blue-500 focus:border-blue-500 uppercase">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 uppercase">Nama Supir</label>
+                                    <input type="text" name="driver_name" value="{{ $shipment->driver_name !== '-' ? $shipment->driver_name : '' }}"
+                                        class="block w-full border-slate-200 rounded-lg text-sm bg-blue-50 focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                            </div>
                             <button type="submit"
                                 class="w-full py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg text-xs transition-colors shadow-lg shadow-green-500/30">
                                 <i data-lucide="check-circle" class="w-4 h-4 inline mr-1"></i>

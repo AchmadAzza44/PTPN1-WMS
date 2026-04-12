@@ -11,6 +11,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\User;
 use Illuminate\Support\Facades\Notification;
 use App\Notifications\ShipmentVerificationNotification;
+use App\Notifications\ShipmentVerifiedNotification;
 
 class ShipmentController extends Controller
 {
@@ -37,6 +38,9 @@ class ShipmentController extends Controller
             'do_number_manual' => $doNumber,
             'contract_number_ref' => $request->query('contract_number_ref'),
             'documented_qty_kg' => $request->query('documented_qty_kg'),
+            'transporter_name' => $request->query('transporter_name'),
+            'driver_name' => $request->query('driver_name'),
+            'vehicle_plate' => $request->query('vehicle_plate'),
             'sisa_pesanan_kg' => null,
             'total_pesanan_kg' => null,
         ];
@@ -136,9 +140,9 @@ class ShipmentController extends Controller
             // 3. Create Shipment 
             $shipment = Shipment::create([
                 'purchase_order_id' => $po->id,
-                'transporter_name' => '-',
-                'driver_name' => '-',
-                'vehicle_plate' => '-',
+                'transporter_name' => $request->transporter_name ?? '-',
+                'driver_name' => $request->driver_name ?? '-',
+                'vehicle_plate' => $request->vehicle_plate ?? '-',
                 'vehicle_checklist' => json_encode(['default' => true]),
                 'weather_condition' => 'Cerah',
                 'dispatched_at' => now(),
@@ -266,8 +270,17 @@ class ShipmentController extends Controller
         $shipment->update([
             'status' => 'verified',
             'verified_at' => now(),
-            'verified_by' => auth()->id() ?? 1
+            'verified_by' => auth()->id() ?? 1,
+            'transporter_name' => collect([$request->transporter_name, $shipment->transporter_name])->filter()->first(),
+            'driver_name' => collect([$request->driver_name, $shipment->driver_name])->filter()->first(),
+            'vehicle_plate' => collect([$request->vehicle_plate, $shipment->vehicle_plate])->filter()->first()
         ]);
+
+        // Kirim Push Notification ke seluruh Krani (admin) kalau sudah diverifikasi
+        $krani = User::where('role', 'admin')->get();
+        if ($krani->count() > 0) {
+            Notification::send($krani, new ShipmentVerifiedNotification($shipment));
+        }
 
         return back()->with('success', 'Pengiriman berhasil diverifikasi! Dokumen siap dicetak.');
     }
@@ -277,12 +290,18 @@ class ShipmentController extends Controller
         $request->validate([
             'do_number_manual' => 'nullable|string',
             'documented_qty_kg' => 'nullable|numeric',
+            'transporter_name' => 'nullable|string',
+            'driver_name' => 'nullable|string',
+            'vehicle_plate' => 'nullable|string',
         ]);
 
         $shipment = Shipment::findOrFail($id);
         $shipment->update([
             'do_number_manual' => $request->do_number_manual,
             'documented_qty_kg' => $request->documented_qty_kg ?? 0,
+            'transporter_name' => collect([$request->transporter_name, $shipment->transporter_name])->filter()->first(),
+            'driver_name' => collect([$request->driver_name, $shipment->driver_name])->filter()->first(),
+            'vehicle_plate' => collect([$request->vehicle_plate, $shipment->vehicle_plate])->filter()->first(),
             'status' => 'completed', // Krani confirms → completed
         ]);
 

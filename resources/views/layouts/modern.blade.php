@@ -2098,10 +2098,16 @@
                 </div>
                 <!-- Notification bell + User avatar (disembunyikan di HP kecil via CSS) -->
                 <div class="topbar-extras" style="display:flex;align-items:center;gap:10px;">
-                    <div class="topbar-icon-btn">
+                    @php
+                        $pendingShipmentsCount = \App\Models\Shipment::where('status', 'draft')->count();
+                        $notifLink = Auth::user()->role === 'operator' ? route('shipments.verification') : route('shipments.index');
+                    @endphp
+                    <a href="{{ $notifLink }}" class="topbar-icon-btn">
                         <i data-lucide="bell" style="width:16px;height:16px;"></i>
-                        <span class="notif-badge">3</span>
-                    </div>
+                        @if($pendingShipmentsCount > 0)
+                            <span class="notif-badge">{{ $pendingShipmentsCount }}</span>
+                        @endif
+                    </a>
                     <div
                         style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--green),var(--blue));display:flex;align-items:center;justify-content:center;color:white;font-size:12px;font-weight:700;box-shadow:0 2px 8px rgba(52,168,83,0.3);">
                         {{ substr(Auth::user()->name, 0, 1) }}
@@ -2240,9 +2246,15 @@
                     <span class="bottom-nav-label">Inbound</span>
                 </a>
                 <a href="{{ route('shipments.verification') }}"
-                    class="bottom-nav-item {{ request()->routeIs('shipments.verification') ? 'active-orange' : '' }}">
+                    class="bottom-nav-item {{ request()->routeIs('shipments.verification') ? 'active-orange' : '' }}" style="position: relative;">
                     <div class="bottom-nav-icon"><i data-lucide="clipboard-check" style="width:18px;height:18px;"></i></div>
                     <span class="bottom-nav-label">Verifikasi</span>
+                    @php
+                        $pendingMobileCount = \App\Models\Shipment::where('status', 'draft')->count();
+                    @endphp
+                    @if($pendingMobileCount > 0)
+                        <span style="position: absolute; top: 0px; right: 10px; width: 12px; height: 12px; border-radius: 50%; background: var(--orange); border: 2px solid #0D1B2A;"></span>
+                    @endif
                 </a>
             @endif
 
@@ -2382,7 +2394,7 @@
             navigator.serviceWorker.ready.then((registration) => {
                 const subscribeOptions = {
                     userVisibleOnly: true,
-                    applicationServerKey: urlBase64ToUint8Array('{{ env("VAPID_PUBLIC_KEY") }}')
+                    applicationServerKey: urlBase64ToUint8Array('{{ config("webpush.vapid.public_key") }}')
                 };
                 return registration.pushManager.subscribe(subscribeOptions);
             }).then((pushSubscription) => {

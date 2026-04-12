@@ -8,9 +8,9 @@
     <div class="space-y-6">
         @forelse($shipments as $shipment)
             <div class="glass p-6 rounded-2xl shadow-sm border-l-4 border-blue-500">
-                <div class="flex justify-between items-start mb-4">
-                    <div>
-                        <div class="flex items-center space-x-3 mb-2">
+                <div class="flex flex-col md:flex-row justify-between items-start mb-4 gap-4">
+                    <div class="w-full md:w-auto">
+                        <div class="flex flex-wrap items-center gap-2 mb-2">
                             <span class="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-1 rounded-lg uppercase">
                                 {{ $shipment->purchaseOrder->po_number }}
                             </span>
@@ -24,10 +24,19 @@
                         <p class="text-slate-500 text-sm">Kontrak:
                             {{ $shipment->purchaseOrder->contract->contract_number ?? '-' }}</p>
                     </div>
-                    <form action="{{ route('shipments.verify', $shipment->id) }}" method="POST">
+                    <form action="{{ route('shipments.verify', $shipment->id) }}" method="POST" class="w-full md:w-auto border-t md:border-t-0 md:border-l border-slate-200 pt-4 md:pt-0 md:pl-4">
                         @csrf
 
                         <div class="space-y-2 mb-3">
+                            <label class="block text-xs font-bold text-slate-500 uppercase">Perusahaan Pengangkutan (Ekspedisi)</label>
+                            <input type="text" name="transporter_name" class="w-full text-sm p-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-blue-500 mb-2" value="{{ $shipment->transporter_name !== '-' ? $shipment->transporter_name : '' }}" placeholder="Contoh: PT. Bintang Jaya" required>
+                            
+                            <label class="block text-xs font-bold text-slate-500 uppercase">Nomor Polisi (Plat)</label>
+                            <input type="text" name="vehicle_plate" class="w-full text-sm p-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-blue-500 mb-2 uppercase" value="{{ $shipment->vehicle_plate !== '-' ? $shipment->vehicle_plate : '' }}" placeholder="Contoh: BD 1234 XY" required>
+                            
+                            <label class="block text-xs font-bold text-slate-500 uppercase">Nama Supir</label>
+                            <input type="text" name="driver_name" class="w-full text-sm p-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-blue-500 mb-4" value="{{ $shipment->driver_name !== '-' ? $shipment->driver_name : '' }}" placeholder="Nama Lengkap Supir" required>
+
                             <label
                                 class="flex items-center space-x-2 p-2 bg-yellow-50 rounded-lg border border-yellow-100 cursor-pointer hover:bg-yellow-100 transition-colors">
                                 <input type="checkbox" name="check_physical" value="1" required

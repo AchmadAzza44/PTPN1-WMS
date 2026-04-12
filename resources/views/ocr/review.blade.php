@@ -1063,6 +1063,9 @@
                                     params.append('do_number_manual', document.querySelector('[name="hasil[no_do]"]')?.value || '');
                                     params.append('contract_number_ref', document.querySelector('[name="hasil[no_kontrak]"]')?.value || '');
                                     params.append('documented_qty_kg', document.querySelector('[name="hasil[jumlah_kg]"]')?.value || '');
+                                    params.append('transporter_name', document.querySelector('[name="hasil[jasa_expedisi]"]')?.value || '');
+                                    params.append('vehicle_plate', document.querySelector('[name="hasil[no_kendaraan]"]')?.value || '');
+                                    params.append('driver_name', document.querySelector('[name="hasil[nama_penerima]"]')?.value || '');
                                 @endif
                                 window.location.href = "{{ route('shipments.create') }}?" + params.toString();
                             @else
@@ -1079,7 +1082,11 @@
                                 params.append('documented_qty_kg', document.querySelector('[name="hasil[volume]"]')?.value || '');
                             @elseif($jenis === 'surat_kuasa')
                                 params.append('do_number_manual', document.querySelector('[name="hasil[no_do]"]')?.value || '');
+                                params.append('contract_number_ref', document.querySelector('[name="hasil[no_kontrak]"]')?.value || '');
                                 params.append('documented_qty_kg', document.querySelector('[name="hasil[jumlah_kg]"]')?.value || '');
+                                params.append('transporter_name', document.querySelector('[name="hasil[jasa_expedisi]"]')?.value || '');
+                                params.append('vehicle_plate', document.querySelector('[name="hasil[no_kendaraan]"]')?.value || '');
+                                params.append('driver_name', document.querySelector('[name="hasil[nama_penerima]"]')?.value || '');
                             @endif
                             window.location.href = "{{ route('shipments.create') }}?" + params.toString();
                         @else

@@ -277,22 +277,25 @@
                 </div>
                 
                 <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:4px;">
+                    @php
+                        // Satu grup ini sebenarnya merepresentasikan 1 Lot. 
+                        // Kita ambil Lot tersebut dan rincian paletnya.
+                        $lot = $lotGroup->first();
+                        $details = $lot ? $lot->details : collect();
+                    @endphp
                     @for($p = 0; $p < $palletsCount; $p++)
                         @php
-                            // Cek apakah ada pallet aktual di indeks ini
-                            $actualPallet = $lotGroup->get($p);
-                            $palletColor = $actualPallet ? $bgColor : '#e2e8f0'; // Kosong jika belum terisi
+                            // Ambil detail palet aktual di indeks ini
+                            $actualDetail = $details->get($p);
+                            $palletColor = $actualDetail ? $bgColor : '#e2e8f0'; // Kosong jika belum terisi
                             
                             $palletNumberText = '';
-                            if ($actualPallet && $actualPallet->details->isNotEmpty()) {
-                                $detail = $actualPallet->details->first();
-                                $fdf = $detail->fdf_number ?? ''; // e.g. "FDF 1120" or "1120"
-                                
-                                // Remove non-numeric chars or just replace "FDF " to get the number
+                            if ($actualDetail) {
+                                $fdf = $actualDetail->fdf_number ?? ''; // e.g. "FDF 1120"
                                 $palletNumberText = trim(str_replace('FDF', '', strtoupper($fdf)));
                             }
                             
-                            $palletLabel = $actualPallet ? "Lot: {$actualPallet->lot_number} | $statusLabel" : "Slot Kosong";
+                            $palletLabel = $actualDetail ? "Lot: {$lot->lot_number} | $statusLabel" : "Slot Kosong";
                         @endphp
                         <div style="background:{{ $palletColor }};height:28px;border-radius:4px;box-shadow:inset 0 0 2px rgba(0,0,0,0.1);cursor:pointer;transition:transform 0.2s;display:flex;align-items:center;justify-content:center;color:white;font-size:9px;font-weight:700;overflow:hidden;"
                              title="{{ $palletLabel }}"
