@@ -682,6 +682,20 @@
             align-items: center;
             gap: 8px;
         }
+        
+        .enable-push-btn {
+            display: none;
+            font-size: 10px;
+            padding: 4px 10px;
+            background: rgba(52, 168, 83, 0.1);
+            color: var(--green);
+            border: 1px solid rgba(52, 168, 83, 0.3);
+            border-radius: 6px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .enable-push-btn:hover { background: rgba(52, 168, 83, 0.2); }
 
         .notif-live-dot {
             width: 6px;
@@ -2371,7 +2385,10 @@
                                     <div class="notif-live-dot"></div>
                                     Notifikasi
                                 </div>
-                                <span id="notif-panel-count" style="font-size:11px;font-weight:600;color:var(--text-muted);">Memuat...</span>
+                                <div style="display:flex; gap:8px; align-items:center;">
+                                    <button id="enable-push-btn" class="enable-push-btn" onclick="requestPushPermission()">Aktifkan Alert HP</button>
+                                    <span id="notif-panel-count" style="font-size:11px;font-weight:600;color:var(--text-muted);">Memuat...</span>
+                                </div>
                             </div>
                             <div class="notif-panel-body" id="notif-panel-body">
                                 <div class="notif-empty">
@@ -2814,14 +2831,31 @@
             if (!("Notification" in window)) return;
             @auth
             if (Notification.permission === "default") {
-                Notification.requestPermission().then(function (permission) {
-                    if (permission === "granted") subscribeUser();
-                });
+                const btn = document.getElementById('enable-push-btn');
+                if (btn) btn.style.display = 'block';
             } else if (Notification.permission === "granted") {
                 subscribeUser();
             }
             @endauth
         }
+
+        window.requestPushPermission = function() {
+            if (!("Notification" in window)) return;
+            Notification.requestPermission().then(function (permission) {
+                if (permission === "granted") {
+                    subscribeUser();
+                    const btn = document.getElementById('enable-push-btn');
+                    if (btn) btn.style.display = 'none';
+                    if (typeof toast === 'function') {
+                        toast('Push Notifikasi Berhasil Diaktifkan!', 'success');
+                    }
+                } else {
+                    if (typeof toast === 'function') {
+                        toast('Izin Push Notifikasi ditolak oleh sistem HP.', 'error');
+                    }
+                }
+            });
+        };
 
         function subscribeUser() {
             navigator.serviceWorker.ready.then((registration) => {
