@@ -315,11 +315,13 @@
             .review-actions {
                 flex-direction: column-reverse;
                 gap: 8px;
+                margin-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
             }
             .review-actions a,
             .review-actions button {
                 width: 100% !important;
                 justify-content: center !important;
+                min-height: 48px;
             }
         }
 
@@ -469,15 +471,116 @@
         /* ═══════════════════════════════════════════
            TABLE RESPONSIVE (lot detail tables)
         ═══════════════════════════════════════════ */
+        .review-table-scroll {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border-radius: 9px;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        /* Scroll hint gradient on right side */
+        .review-table-scroll::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 24px;
+            background: linear-gradient(90deg, transparent, rgba(248,250,252,0.9));
+            pointer-events: none;
+            opacity: 1;
+            transition: opacity 0.3s;
+            border-radius: 0 9px 9px 0;
+        }
+        .review-table-scroll.scrolled-end::after { opacity: 0; }
+
+        /* ── Mobile Card Mode for Detail Table (≤640px) ── */
         @media (max-width: 640px) {
-            .review-right-col table { font-size: 12px; }
-            .review-right-col table th { font-size: 9px; padding: 6px 6px; }
-            .review-right-col table td { padding: 5px 6px; }
-            .review-right-col table .td-input { font-size: 12px; padding: 5px 6px; }
+            .review-table-scroll {
+                overflow-x: visible;
+                border: none;
+                border-radius: 0;
+            }
+            .review-table-scroll::after { display: none; }
+
+            .review-right-col table#tabelBaris {
+                display: block;
+                min-width: 0 !important;
+                width: 100% !important;
+            }
+            .review-right-col table#tabelBaris thead {
+                display: none;
+            }
+            .review-right-col table#tabelBaris tbody {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+            .review-right-col table#tabelBaris tbody tr {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                background: #fff;
+                border: 1px solid var(--border, #e2e8f0);
+                border-radius: 12px;
+                padding: 12px 14px;
+                box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+                border-bottom: none !important;
+            }
+            .review-right-col table#tabelBaris tbody tr td {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 0 !important;
+            }
+            .review-right-col table#tabelBaris tbody tr td::before {
+                content: attr(data-label);
+                font-size: 10px;
+                font-weight: 700;
+                color: var(--text-muted, #94a3b8);
+                text-transform: uppercase;
+                letter-spacing: 0.06em;
+                flex-shrink: 0;
+                width: 70px;
+                min-width: 70px;
+            }
+            .review-right-col table#tabelBaris tbody tr td .td-input {
+                flex: 1;
+                min-width: 0;
+                font-size: 14px;
+                padding: 8px 10px;
+                border: 1.5px solid #e2e8f0;
+                border-radius: 8px;
+                background: rgba(248,250,252,0.7);
+            }
+            .review-right-col table#tabelBaris tbody tr td .td-input:focus {
+                border-color: var(--green, #34A853);
+                background: white;
+                outline: none;
+            }
+            /* Delete button as a bottom row action */
+            .review-right-col table#tabelBaris tbody tr td:last-child {
+                justify-content: flex-end;
+                padding-top: 4px !important;
+                border-top: 1px dashed rgba(203,213,225,0.5);
+                margin-top: 2px;
+            }
+            .review-right-col table#tabelBaris tbody tr td:last-child::before {
+                display: none;
+            }
+            .review-right-col table#tabelBaris tbody tr td:last-child button {
+                padding: 6px 14px;
+                font-size: 12px;
+                font-weight: 600;
+                border-radius: 8px;
+            }
         }
 
-        @media (max-width: 480px) {
-            .review-right-col table { min-width: 420px !important; }
+        @media (min-width: 641px) and (max-width: 900px) {
+            .review-right-col table { font-size: 12px; }
+            .review-right-col table th { font-size: 9px; padding: 6px 4px; white-space: nowrap; }
+            .review-right-col table td { padding: 4px 4px; }
+            .review-right-col table .td-input { font-size: 12px; padding: 5px 4px; min-width: 60px; }
         }
 
         /* ═══════════════════════════════════════════
@@ -654,32 +757,35 @@
                                 <i data-lucide="plus" style="width:11px;height:11px;"></i> Tambah baris
                             </button>
                         </div>
-                        <div style="overflow-x:auto;border-radius:9px;border:1px solid var(--border);">
-                        <table style="width:100%;min-width:520px;border-collapse:collapse;font-size:13px;" id="tabelBaris">
+                        <div class="review-table-scroll" id="tableScrollWrap">
+                        <table style="width:100%;min-width:620px;border-collapse:collapse;font-size:13px;" id="tabelBaris">
                                 <thead>
                                     <tr style="background:rgba(248,250,252,0.9);">
-                                        <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);min-width:90px;">Peti/Lot</th>
-                                        <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);min-width:100px;">No. Lot</th>
-                                        <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);min-width:70px;">Bale</th>
-                                        <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);min-width:100px;">Berat (kg)</th>
-                                        <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);width:52px;">Hapus</th>
+                                        <th style="padding:8px 8px;text-align:left;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);min-width:85px;">Peti/Lot</th>
+                                        <th style="padding:8px 8px;text-align:left;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);min-width:80px;">No. Lot</th>
+                                        <th style="padding:8px 8px;text-align:left;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);min-width:80px;">No. Palet</th>
+                                        <th style="padding:8px 8px;text-align:left;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);min-width:60px;">Bale</th>
+                                        <th style="padding:8px 8px;text-align:left;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);min-width:90px;">Berat (kg)</th>
+                                        <th style="padding:8px 6px;text-align:center;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);width:44px;">Hapus</th>
                                     </tr>
                                 </thead>
                                 <tbody id="barisTbody">
                                     @forelse($baris as $i => $b)
                                         <tr data-idx="{{ $i }}" style="border-bottom:1px solid var(--border);">
-                                            <td style="padding:6px 8px;"><input type="text" name="hasil[baris][{{ $i }}][no_peti]"
+                                            <td style="padding:5px 6px;" data-label="Peti/Lot"><input type="text" name="hasil[baris][{{ $i }}][no_peti]"
                                                     value="{{ $b['no_peti'] ?? '' }}" class="td-input" placeholder="No. Peti"></td>
-                                            <td style="padding:6px 8px;"><input type="text" name="hasil[baris][{{ $i }}][no_lot]"
+                                            <td style="padding:5px 6px;" data-label="No. Lot"><input type="text" name="hasil[baris][{{ $i }}][no_lot]"
                                                     value="{{ $b['no_lot'] ?? '' }}" class="td-input" placeholder="No. Lot"></td>
-                                            <td style="padding:6px 8px;"><input type="number" name="hasil[baris][{{ $i }}][jml_bale]"
+                                            <td style="padding:5px 6px;" data-label="No. Palet"><input type="text" name="hasil[baris][{{ $i }}][no_palet]"
+                                                    value="{{ $b['no_palet'] ?? '' }}" class="td-input" placeholder="No. Palet"></td>
+                                            <td style="padding:5px 6px;" data-label="Bale"><input type="number" name="hasil[baris][{{ $i }}][jml_bale]"
                                                     value="{{ $b['jml_bale'] ?? '' }}" class="td-input" placeholder="0"></td>
-                                            <td style="padding:6px 8px;"><input type="number" name="hasil[baris][{{ $i }}][berat_kg]"
+                                            <td style="padding:5px 6px;" data-label="Berat"><input type="number" name="hasil[baris][{{ $i }}][berat_kg]"
                                                     value="{{ $b['berat_kg'] ?? '' }}" class="td-input" step="0.01"
                                                     placeholder="0"></td>
-                                            <td style="padding:6px 8px;text-align:center;"><button type="button"
+                                            <td style="padding:5px 4px;text-align:center;" data-label=""><button type="button"
                                                     onclick="hapusBaris(this)"
-                                                    style="padding:4px 8px;border-radius:6px;background:rgba(239,68,68,0.08);color:#ef4444;border:none;cursor:pointer;font-size:11px;">✕</button>
+                                                    style="padding:4px 8px;border-radius:6px;background:rgba(239,68,68,0.08);color:#ef4444;border:none;cursor:pointer;font-size:11px;">✕ Hapus</button>
                                             </td>
                                         </tr>
                                     @empty
@@ -892,11 +998,12 @@
             const tr = document.createElement('tr');
             tr.style.borderBottom = '1px solid var(--border)';
             tr.innerHTML = `
-            <td style="padding:6px 8px;"><input type="text"   name="hasil[baris][${i}][no_peti]"   class="td-input" placeholder="No. Peti"></td>
-            <td style="padding:6px 8px;"><input type="text"   name="hasil[baris][${i}][no_lot]"    class="td-input" placeholder="No. Lot"></td>
-            <td style="padding:6px 8px;"><input type="number" name="hasil[baris][${i}][jml_bale]"  class="td-input" placeholder="0"></td>
-            <td style="padding:6px 8px;"><input type="number" name="hasil[baris][${i}][berat_kg]"  class="td-input" step="0.01" placeholder="0"></td>
-            <td style="padding:6px 8px;text-align:center;"><button type="button" onclick="hapusBaris(this)" style="padding:4px 8px;border-radius:6px;background:rgba(239,68,68,0.08);color:#ef4444;border:none;cursor:pointer;font-size:11px;">✕</button></td>
+            <td style="padding:5px 6px;" data-label="Peti/Lot"><input type="text"   name="hasil[baris][${i}][no_peti]"   class="td-input" placeholder="No. Peti"></td>
+            <td style="padding:5px 6px;" data-label="No. Lot"><input type="text"   name="hasil[baris][${i}][no_lot]"    class="td-input" placeholder="No. Lot"></td>
+            <td style="padding:5px 6px;" data-label="No. Palet"><input type="text"   name="hasil[baris][${i}][no_palet]"  class="td-input" placeholder="No. Palet"></td>
+            <td style="padding:5px 6px;" data-label="Bale"><input type="number" name="hasil[baris][${i}][jml_bale]"  class="td-input" placeholder="0"></td>
+            <td style="padding:5px 6px;" data-label="Berat"><input type="number" name="hasil[baris][${i}][berat_kg]"  class="td-input" step="0.01" placeholder="0"></td>
+            <td style="padding:5px 4px;text-align:center;" data-label=""><button type="button" onclick="hapusBaris(this)" style="padding:4px 8px;border-radius:6px;background:rgba(239,68,68,0.08);color:#ef4444;border:none;cursor:pointer;font-size:11px;">✕ Hapus</button></td>
         `;
             document.getElementById('barisTbody').appendChild(tr);
         }
@@ -1020,6 +1127,18 @@
         });
 
         if (window.lucide) lucide.createIcons();
+
+        // ── Table scroll hint detection ──────────────────
+        const scrollWrap = document.getElementById('tableScrollWrap');
+        if (scrollWrap) {
+            function checkScrollEnd() {
+                const isEnd = scrollWrap.scrollLeft + scrollWrap.clientWidth >= scrollWrap.scrollWidth - 4;
+                scrollWrap.classList.toggle('scrolled-end', isEnd);
+            }
+            scrollWrap.addEventListener('scroll', checkScrollEnd, { passive: true });
+            // Initial check
+            setTimeout(checkScrollEnd, 100);
+        }
     </script>
     <style>
         @keyframes spin { 100% { transform: rotate(360deg); } }

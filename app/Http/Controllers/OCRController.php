@@ -353,6 +353,7 @@ class OCRController extends Controller
                         'stock_lot_id' => $stockLot->id,
                         'packaging_type' => 'pallet',
                         'fdf_number' => $b['no_peti'] ?? $ticketNumber,
+                        'pallet_number' => $b['no_palet'] ?? null,
                         'bale_range' => '-',
                         'quantity_unit' => $b['jml_bale'] ?? 0,
                         'net_weight_kg' => $b['berat_kg'] ?? 0,
