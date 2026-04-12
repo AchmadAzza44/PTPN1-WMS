@@ -15,8 +15,8 @@
                         <i data-lucide="image" class="w-4 h-4 mr-2 text-slate-400"></i>
                         Foto Dokumen OCR
                     </h3>
-                    <div class="rounded-xl overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center p-2">
-                        <img src="{{ url('/cloud-storage/' . request('foto_path')) }}" alt="Dokumen" class="w-full h-auto max-h-[75vh] object-contain rounded-lg">
+                    <div class="rounded-xl overflow-y-auto border border-slate-200 bg-slate-50 p-2 max-h-[80vh] custom-scrollbar">
+                        <img src="{{ url('/cloud-storage/' . request('foto_path')) }}" alt="Dokumen" class="w-full h-auto object-top rounded-lg block">
                     </div>
                 </div>
             </div>
