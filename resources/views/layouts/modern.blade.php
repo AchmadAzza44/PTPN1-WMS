@@ -2804,10 +2804,27 @@
             }
         }
 
-        // Initial fetch + polling every 15s
+        // ── Adaptive Real-Time Polling ──────────────
+        // 3s when tab is active (feels instant), 30s when in background
+        let notifPollTimer = null;
+        const POLL_ACTIVE   = 3000;   // 3 detik saat tab aktif
+        const POLL_BACKGROUND = 30000; // 30 detik saat tab di background
+
+        function startNotifPolling() {
+            if (notifPollTimer) clearInterval(notifPollTimer);
+            const interval = document.hidden ? POLL_BACKGROUND : POLL_ACTIVE;
+            notifPollTimer = setInterval(fetchNotifications, interval);
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             fetchNotifications();
-            setInterval(fetchNotifications, 15000);
+            startNotifPolling();
+        });
+
+        // Switch polling speed when tab visibility changes
+        document.addEventListener('visibilitychange', function() {
+            startNotifPolling();
+            if (!document.hidden) fetchNotifications(); // immediate fetch when tab becomes active
         });
 
         // ── Live clock ──────────────────────────────
