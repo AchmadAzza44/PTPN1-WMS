@@ -32,16 +32,6 @@
                 @endif
             </div>
 
-            @if($shipment->status == 'draft')
-                <!-- Simulate Verify Button for Demo if user wants to self-verify -->
-                <form action="{{ route('shipments.verify', $shipment->id) }}" method="POST">
-                    @csrf
-                    <button type="submit"
-                        class="text-sm bg-white/50 hover:bg-white px-3 py-1.5 rounded-lg border border-transparent hover:border-yellow-300 transition-colors font-bold">
-                        Simulasi Verifikasi
-                    </button>
-                </form>
-            @endif
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
