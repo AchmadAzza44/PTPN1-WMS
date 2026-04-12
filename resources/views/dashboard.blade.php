@@ -248,7 +248,7 @@
 
     <div id="heatmap-grid" class="p-4 rounded-xl"
          style="background:rgba(241,245,249,0.4);border:1px solid rgba(226,232,240,0.6);min-height:180px;display:flex;flex-wrap:wrap;gap:16px;">
-        @foreach($groupedSirStocks->take(12) as $prefix => $lotGroup)
+        @foreach($groupedSirStocks as $prefix => $lotGroup)
             @php
                 // Ambil status dari lot terakhir pembentuk grup ini
                 $lastStock = $lotGroup->last();
