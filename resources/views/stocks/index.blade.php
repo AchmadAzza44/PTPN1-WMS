@@ -182,10 +182,10 @@
 {{-- ══ Summary mini-cards ══ --}}
 <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6 anim-fade-up">
     @php
-        $totalLot  = $stocks->total();
-        $available = $stocks->getCollection()->where('status','blue')->count();
-        $shipping  = $stocks->getCollection()->whereIn('status',['yellow','orange'])->count();
-        $totalKg   = $stocks->getCollection()->sum(fn($s) => $s->details->sum('net_weight_kg'));
+        $totalLot  = $allStocks->count();
+        $available = $allStocks->where('status','blue')->count();
+        $shipping  = $allStocks->whereIn('status',['yellow','orange'])->count();
+        $totalKg   = $allStocks->sum(fn($s) => $s->details->sum('net_weight_kg'));
     @endphp
     @foreach([
         ['label'=>'Total Data',  'val'=>number_format($totalLot),      'icon'=>'package-2',   'clr'=>'#34a853'],
