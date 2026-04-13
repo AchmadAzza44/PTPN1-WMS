@@ -168,16 +168,10 @@ class ShipmentController extends Controller
                 'transporter_name' => $request->transporter_name ?? '-',
                 'driver_name' => $request->driver_name ?? '-',
                 'vehicle_plate' => $request->vehicle_plate ?? '-',
-                'vehicle_checklist' => json_encode([
-                    'default' => true,
-                    'physical_condition_ok' => true,
-                    'pallet_lot_match' => true,
-                ]),
+                'vehicle_checklist' => json_encode(['default' => true]),
                 'weather_condition' => 'Cerah',
                 'dispatched_at' => now(),
-                'status' => 'verified', // Langsung Bypass Petugas Gudang
-                'verified_at' => now(),
-                'verified_by' => auth()->id() ?? 1,
+                'status' => 'draft',
                 'do_number_manual' => $do_number,
                 'documented_qty_kg' => $totalLoaded, // Set ke jumlah yang benar-benar dikirim pada pengiriman ini
             ]);
@@ -227,9 +221,17 @@ class ShipmentController extends Controller
 
             DB::commit();
 
-            // Notification to Petugas Gudang is no longer needed since it's auto-verified
-            
-            return redirect()->route('shipments.show', $shipment->id)->with('success', 'Surat Jalan berhasil dibuat dan siap dicetak!');
+            try {
+                // Kirim Push Notification ke seluruh Petugas Gudang (operator)
+                $petugasGudang = User::where('role', 'operator')->get();
+                if ($petugasGudang->count() > 0) {
+                    Notification::send($petugasGudang, new ShipmentVerificationNotification($shipment));
+                }
+            } catch (\Exception $e) {
+                \Log::warning('Push Notification Error: ' . $e->getMessage());
+            }
+
+            return redirect()->route('shipments.show', $shipment->id)->with('success', 'Pesanan diproses, tunggu petugas verifikasi');
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -328,7 +330,7 @@ class ShipmentController extends Controller
             \Log::warning('Push Notification Error: ' . $e->getMessage());
         }
 
-        return back()->with('success', 'Pengiriman berhasil diverifikasi! Dokumen siap dicetak.');
+        return redirect()->route('shipments.show', $shipment->id)->with('success', 'Pengiriman berhasil diverifikasi! Dokumen siap dicetak.');
     }
 
     public function updateDetails(Request $request, $id)
