@@ -5,9 +5,8 @@
 @section('subheader', 'Buat Surat Jalan dan alokasikan stok untuk pengiriman')
 
 @section('content')
-    <div class="{{ request('foto_path') ? 'max-w-7xl' : 'max-w-4xl' }} mx-auto">
-        <div class="grid grid-cols-1 {{ request('foto_path') ? 'lg:grid-cols-12 gap-8' : '' }}">
-            @if(request('foto_path'))
+    <div class="max-w-7xl mx-auto">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <!-- Kolom Kiri: Foto Dokumen -->
             <div class="lg:col-span-5 relative">
                 <div class="sticky top-6 glass p-4 rounded-2xl shadow-sm border-t-4 border-blue-500">
@@ -15,15 +14,26 @@
                         <i data-lucide="image" class="w-4 h-4 mr-2 text-slate-400"></i>
                         Foto Dokumen OCR
                     </h3>
-                    <div class="rounded-xl overflow-y-auto border border-slate-200 bg-slate-50 p-2 max-h-[80vh] custom-scrollbar">
-                        <img src="{{ url('/cloud-storage/' . request('foto_path')) }}" alt="Dokumen" class="w-full h-auto object-top rounded-lg block">
+                    <div class="rounded-xl overflow-y-auto border border-slate-200 bg-slate-50 flex items-center justify-center p-2 custom-scrollbar min-h-[300px] max-h-[80vh]">
+                        @if(request('foto_path') || (!empty($preFill) && !empty($preFill['foto_path'])))
+                            @php 
+                                $foto = request('foto_path') ?? $preFill['foto_path'];
+                            @endphp
+                            <img src="{{ url('/cloud-storage/' . $foto) }}" alt="Dokumen" class="w-full h-auto object-top rounded-lg block">
+                        @else
+                            <div class="text-center p-6">
+                                <div class="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center mx-auto mb-3">
+                                    <i data-lucide="image-off" class="w-8 h-8 text-slate-400"></i>
+                                </div>
+                                <p class="text-sm font-bold text-slate-500">Preview Tidak Tersedia</p>
+                                <p class="text-xs text-slate-400 mt-1">Pengiriman ini dibuat secara manual atau <br>tidak memiliki lampiran foto OCR.</p>
+                            </div>
+                        @endif
                     </div>
                 </div>
             </div>
+            
             <div class="lg:col-span-7">
-            @else
-            <div>
-            @endif
         <form action="{{ route('shipments.store') }}" method="POST" id="shipmentForm">
             @csrf
             <input type="hidden" name="foto_path" value="{{ request('foto_path') ?? ($preFill['foto_path'] ?? '') }}">
@@ -185,9 +195,7 @@
                 </div>
             </div>
         </form>
-        @if(request('foto_path'))
             </div>
-        @endif
         </div>
     </div>
     </div>
