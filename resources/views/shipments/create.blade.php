@@ -162,7 +162,7 @@
                             </button>
                         </div>
 
-                        <div id="items-container" class="space-y-3">
+                        <div id="items-container" class="space-y-3 max-h-[55vh] overflow-y-auto pr-2 custom-scrollbar">
                             <!-- Template Row will be injected here -->
                         </div>
 
