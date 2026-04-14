@@ -911,6 +911,21 @@
                     </div>
                 @endif
 
+                {{-- ── Validation Warning Panel (SIR20) ── --}}
+                @if($jenis === 'sir20')
+                <div id="validationWarnings" style="display:none;margin-bottom:14px;padding:14px 16px;border-radius:12px;background:rgba(245,158,11,0.08);border:1.5px solid rgba(245,158,11,0.25);">
+                    <div style="display:flex;align-items:flex-start;gap:10px;">
+                        <div style="width:32px;height:32px;border-radius:8px;background:rgba(245,158,11,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i data-lucide="alert-triangle" style="width:16px;height:16px;color:#f59e0b;"></i>
+                        </div>
+                        <div style="flex:1;">
+                            <p style="font-size:12px;font-weight:800;color:#92400e;margin:0 0 6px 0;">⚠️ Peringatan Cross-Validation</p>
+                            <div id="warningsList" style="font-size:11px;color:#92400e;line-height:1.6;"></div>
+                        </div>
+                    </div>
+                </div>
+                @endif
+
                 {{-- ── Tombol Aksi ── --}}
                 <div class="review-actions">
                     <a href="{{ route('ocr.index', ['type' => $type]) }}"
@@ -1012,7 +1027,110 @@
 
         function hapusBaris(btn) {
             btn.closest('tr').remove();
+            runCrossValidation(); // Re-validate after row deletion
         }
+
+        // ── Cross-validation (SIR20) ─────────────────────
+        function runCrossValidation() {
+            const panel = document.getElementById('validationWarnings');
+            const list  = document.getElementById('warningsList');
+            if (!panel || !list) return;
+
+            const warnings = [];
+
+            // Get total_bale and total_kg from header inputs
+            const totalBaleInput = document.querySelector('[name="hasil[total_bale]"]');
+            const totalKgInput   = document.querySelector('[name="hasil[total_kg]"]');
+
+            const totalBale = parseInt(totalBaleInput?.value) || 0;
+            const totalKg   = parseInt(totalKgInput?.value)   || 0;
+
+            // Sum bale and berat from table rows
+            const baleInputs  = document.querySelectorAll('[name$="[jml_bale]"]');
+            const beratInputs = document.querySelectorAll('[name$="[berat_kg]"]');
+
+            let sumBale = 0, sumBerat = 0;
+            baleInputs.forEach(inp => { sumBale += parseInt(inp.value) || 0; });
+            beratInputs.forEach(inp => { sumBerat += parseInt(inp.value) || 0; });
+
+            // Check bale mismatch
+            if (totalBale > 0 && sumBale > 0 && sumBale !== totalBale) {
+                const diff = sumBale - totalBale;
+                let hint = '';
+                if (diff > 0 && diff % 2 === 0) {
+                    hint = ' (kemungkinan angka 6 terbaca 8 oleh OCR)';
+                } else if (diff < 0 && Math.abs(diff) % 2 === 0) {
+                    hint = ' (kemungkinan angka 8 terbaca 6 oleh OCR)';
+                }
+                warnings.push(
+                    `<b>Total Bale tidak cocok:</b> Jumlah baris = <b>${sumBale}</b>, Total header = <b>${totalBale}</b> (selisih ${Math.abs(diff)})${hint}`
+                );
+            }
+
+            // Check berat mismatch
+            if (totalKg > 0 && sumBerat > 0 && Math.abs(sumBerat - totalKg) > 50) {
+                warnings.push(
+                    `<b>Total Berat tidak cocok:</b> Jumlah baris = <b>${sumBerat.toLocaleString()}</b> kg, Total header = <b>${totalKg.toLocaleString()}</b> kg`
+                );
+            }
+
+            // Check for empty no_lot
+            const lotInputs = document.querySelectorAll('[name$="[no_lot]"]');
+            let emptyLots = 0;
+            lotInputs.forEach(inp => { if (!inp.value.trim()) emptyLots++; });
+            if (emptyLots > 0) {
+                warnings.push(
+                    `<b>${emptyLots} baris</b> memiliki No. Lot kosong — pastikan terisi sebelum menyimpan.`
+                );
+            }
+
+            // Show or hide panel
+            if (warnings.length > 0) {
+                list.innerHTML = warnings.map(w => `• ${w}`).join('<br>');
+                panel.style.display = 'block';
+                if (window.lucide) lucide.createIcons();
+            } else {
+                panel.style.display = 'none';
+            }
+        }
+
+        // Attach live validation listeners  
+        document.addEventListener('DOMContentLoaded', () => {
+            // Run on page load
+            setTimeout(runCrossValidation, 500);
+
+            // Attach to all relevant inputs
+            const watchSelectors = [
+                '[name$="[jml_bale]"]', '[name$="[berat_kg]"]',
+                '[name$="[no_lot]"]',
+                '[name="hasil[total_bale]"]', '[name="hasil[total_kg]"]'
+            ];
+            watchSelectors.forEach(sel => {
+                document.querySelectorAll(sel).forEach(inp => {
+                    inp.addEventListener('input', runCrossValidation);
+                });
+            });
+
+            // MutationObserver for dynamically added rows
+            const tbody = document.getElementById('barisTbody');
+            if (tbody) {
+                const observer = new MutationObserver(() => {
+                    setTimeout(() => {
+                        const watchSelectors2 = ['[name$="[jml_bale]"]', '[name$="[berat_kg]"]', '[name$="[no_lot]"]'];
+                        watchSelectors2.forEach(sel => {
+                            tbody.querySelectorAll(sel).forEach(inp => {
+                                if (!inp.dataset.validated) {
+                                    inp.addEventListener('input', runCrossValidation);
+                                    inp.dataset.validated = '1';
+                                }
+                            });
+                        });
+                        runCrossValidation();
+                    }, 100);
+                });
+                observer.observe(tbody, { childList: true });
+            }
+        });
 
         document.getElementById('reviewForm').addEventListener('submit', function(e) {
             e.preventDefault();
@@ -1150,6 +1268,44 @@
             // Initial check
             setTimeout(checkScrollEnd, 100);
         }
+
+        // ── Auto-fill ditto marks on load ────────────────
+        document.addEventListener('DOMContentLoaded', () => {
+            const tbody = document.getElementById('barisTbody');
+            if (tbody) {
+                const rows = tbody.querySelectorAll('tr');
+                let lastLot = '';
+                rows.forEach((tr, index) => {
+                    const lotInput = tr.querySelector('input[name$="[no_lot]"]');
+                    if (lotInput) {
+                        let val = lotInput.value.trim().toLowerCase();
+                        
+                        // Menangani kasus di mana OCR membaca '"' sebagai '2' secara berurutan
+                        // Jika baris pertama bukan 2, dan baris selanjutnya berisi '2' atau kosong atau tanda hubung:
+                        const ditto = ['"', '""', "''", '”', '“', '-', 'sda', 'sda.', 'sama', '^', '2']; 
+                        
+                        if (index > 0 && (val === '' || ditto.includes(val))) {
+                            if (lastLot !== '' && lastLot !== '2') {
+                                lotInput.value = lastLot;
+                                // Highlight that it was auto-filled
+                                lotInput.style.backgroundColor = '#e8f5e9';
+                                lotInput.style.borderColor = '#34A853';
+                                setTimeout(() => {
+                                    lotInput.style.backgroundColor = 'rgba(248, 250, 252, 0.7)';
+                                    lotInput.style.borderColor = 'transparent';
+                                }, 3000);
+                            }
+                        } else {
+                            if (val !== '' && val !== '"' && val !== '2') {
+                                lastLot = lotInput.value.trim();
+                            } else if (index === 0 && val !== '') {
+                                lastLot = lotInput.value.trim();
+                            }
+                        }
+                    }
+                });
+            }
+        });
     </script>
     <style>
         @keyframes spin { 100% { transform: rotate(360deg); } }

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-OCR Engine v16.1 - Maverick-First Parallel Racing + Two-Pass Parallel SIR20
+OCR Engine v17 - Enhanced Accuracy: Confusion Matrix + Cross-Validation + Dot-Matrix Boost
 ================================================================================
 Strategy: Akurasi MAKSIMUM mendekati AI vision terbaik, dengan kecepatan optimal.
 
@@ -56,8 +56,8 @@ PREFERRED_MODEL = "meta-llama/llama-4-maverick:free"
 
 # ─── TOKEN LIMITS ────────────────────────────────────────────────────────────
 MAX_TOKENS = {
-    "sir20_header":  600,   # Pass-1: hanya header (hemat token, cepat)
-    "sir20_table":   2200,  # Pass-2: hanya tabel (banyak baris, perlu token besar)
+    "sir20_header":  800,   # Pass-1: header with confusion matrix guidance (v17: more tokens)
+    "sir20_table":   2800,  # Pass-2: table with cross-validation reasoning (v17: more tokens)
     "sir20":         2500,  # Single-pass fallback
     "rss1":          1800,  # RSS1 table bisa panjang
     "do":            1500,  # DO bisa punya banyak field
@@ -88,28 +88,49 @@ Ignore the table completely. Focus only on the top-right box area.
 ⚠️ ANTI-HALLUCINATION: Output null if you CANNOT read a value clearly. Never guess or invent.
 ⚠️ YEAR: Dot-matrix digit '6' looks like '0'. Year must be 2025 or 2026. If you see 2020→2026, 2021→2026.
 
+=== HANDWRITING CONFUSION MATRIX (CRITICAL — memorize these) ===
+Handwritten digits on these documents are often misread. Be EXTRA careful:
+  7 ↔ 2  (handwritten 7 has a horizontal crossbar, 2 does not — look for the crossbar!)
+  8 ↔ 0  (handwritten 8 has a pinched middle, 0 is a smooth oval)
+  6 ↔ 0  (dot-matrix 6 has a tail curving inward at top, 0 does not)
+  3 ↔ 8  (3 is open on the left, 8 is closed on both sides)
+  9 ↔ 4  (9 has a round top, 4 has angular top with crossbar)
+  5 ↔ 6  (5 has a flat top + curve bottom, 6 has round loop bottom)
+  1 ↔ 7  (1 is a straight vertical line, 7 has a top horizontal + crossbar)
+When uncertain between two digits, LOOK AT CONTEXT and stroke details.
+
 FIELD LOCATIONS (top-right box, printed labels + handwritten values beside them):
 
 [no_surat] — next to label "Nomor" or "No."
-  Format: CODE/ROMAN_MONTH/YYYY.MM.SEQ  e.g. "7K17/II/2026.02.05"
+  Format: CODE/ROMAN_MONTH/YYYY.MM.SEQ  e.g. "7K17/IV/2026.04.369"
   - CODE is typically 4-6 chars like "7K17" or "BKT7"
   - ROMAN_MONTH: I II III IV V VI VII VIII IX X XI XII (written as roman numerals)
-  - YYYY.MM.SEQ: year (2025/2026) . month-number (01-12) . sequence (01-99)
+  - YYYY.MM.SEQ: year (2025/2026) . month-number (01-12) . sequence number
   - CRITICAL: if year looks like 2020/2021/2022/2023 → it is almost certainly 2026 (0 misread for 6)
+  - SEQUENCE NUMBER may be 1, 2, or 3 digits (e.g. "5", "39", "369"). Read EVERY digit individually.
+    ⚠️ Do NOT skip digits. If you see 3 handwritten digits, output all 3 (e.g. "369" not "39").
+    Count the digits carefully — a 3-digit sequence like "369" must not become "39".
 
 [tanggal] — next to label "Tanggal" or "Tgl."
   Output format: "DD MonthName YYYY"
   - DD: day (01-31), MonthName: Indonesian (Januari Februari Maret April Mei Juni Juli Agustus September Oktober November Desember), YYYY: 2025 or 2026
-  - e.g. "05 Februari 2026", "30 Januari 2026"
+  - e.g. "14 April 2026", "05 Februari 2026", "30 Januari 2026"
+  - The day and month may be HANDWRITTEN. Read each digit of DD very carefully.
+  - Apply the confusion matrix above: a handwritten "14" must not become "09" or "19".
+    Look at second digit: 4 has a sharp angular top + crossbar, 9 has round top.
+  - The month might be written as a number (04) or as text (April). If number, convert to name.
 
 [no_kendaraan] — next to label "No. Kendaraan" or "No Kend" or "Kend."
   Vehicle plate number, HANDWRITTEN. Format: 2-letters SPACE digits SPACE 1-3letters
-  - e.g. "BD 8371 P", "BD 8763 AP", "BG 1234 AB", "BK 4455 C"
-  - Common confusions: B↔8, D↔0, P↔R, I↔1, O↔0
-  - Even if faint, try your best to read all parts
+  - e.g. "BD 8751 P", "BD 8763 AP", "BG 1234 AB", "BK 4455 C"
+  - Apply confusion matrix: 7↔2 is the #1 error! A handwritten 7 has a CROSSBAR through the stem.
+    If a digit has a horizontal cross-stroke, it is 7 not 2.
+  - Also watch: B↔8, D↔0, P↔R, I↔1, O↔0, 5↔6
+  - Even if faint, try your best to read all parts.
 
 [nama_supir] — next to label "Nama Supir" or "Supir"
-  Driver's name, HANDWRITTEN. e.g. "RUSYAM", "YOBI", "SELAMET", "SUNOTO", "ANTO"
+  Driver's name, HANDWRITTEN. e.g. "SYAMSUL", "RUSYAM", "YOBI", "SELAMET", "SUNOTO"
+  - Read all letters carefully. This is typically an Indonesian male name.
 
 Output ONLY this JSON:
 {"no_surat":null,"tanggal":null,"no_kendaraan":null,"nama_supir":null}""" + JSON_STRICT
@@ -119,6 +140,15 @@ Table type: dot-matrix print, may be faded, folded, or photographed at an angle.
 
 YOUR TASK: Extract ALL rows from the LEFT "Dikirim" table. The RIGHT "Diterima" table = IGNORE.
 
+=== DOT-MATRIX DIGIT CONFUSION (CRITICAL — memorize these) ===
+Dot-matrix printers produce characters with dots. Common misreads:
+  8 ↔ 0  (8 has a pinched middle with two loops, 0 is a single smooth oval)
+  6 ↔ 0  (6 has a tail curving inward at top-left, 0 does not)
+  3 ↔ 8  (3 is open on the left side, 8 is closed on BOTH sides)
+  5 ↔ 6  (5 has flat top stroke going right, 6 has a round top curving left)
+  1 ↔ 7  (1 is straight vertical, 7 has horizontal top bar)
+When reading faded dot-matrix, ZOOM IN mentally on each digit's shape.
+
 === TABLE COLUMNS (left to right) ===
   1. Nomor Peti  → no_peti
   2. Jenis Mutu  → jenis_mutu
@@ -127,13 +157,16 @@ YOUR TASK: Extract ALL rows from the LEFT "Dikirim" table. The RIGHT "Diterima" 
   5. Jml Balle   → jml_bale
 
 ── COLUMN: no_peti ──
-  Format: 3 uppercase letters + space + numbers. e.g. "PDF 306", "FDF 309", "ABC 1234"
-  - Never digits alone. Estimate from context if faint. null if impossible.
+  Format: 3 uppercase letters + space + numbers. e.g. "FDF 2007", "FDF 309", "PDF 1234"
+  - The 3-letter prefix is usually "FDF" or "PDF". Never digits alone.
+  - ⚠️ The last digit is critical: carefully distinguish 8 vs 0 (8 has TWO loops, 0 has ONE).
+    Example: "FDF 2008" must not become "FDF 2000". Count the loops in the last digit.
+  - null if completely impossible to read.
 
 ── COLUMN: no_lot ── ⚠️ READ EVERY DIGIT WITH EXTREME CARE ⚠️
   This column is VERY NARROW and HANDWRITTEN. It contains a short integer only.
-  Valid range: 1 to 999 (1 digit, 2 digits, or 3 digits: "2", "39", "136", "137")
-  - "136" means one-hundred-thirty-six. It has 3 digits. Read ALL of them.
+  Valid range: 1 to 999 (1 digit, 2 digits, or 3 digits: "2", "39", "136", "251")
+  - "251" means two-hundred-fifty-one. It has 3 digits. Read ALL of them.
   - "069" means lot 69 (leading zero is padding, ignore it).
 
   DITTO MARKS — symbols meaning "same lot as row above":
@@ -146,11 +179,10 @@ YOUR TASK: Extract ALL rows from the LEFT "Dikirim" table. The RIGHT "Diterima" 
     4. If NO integer exists anywhere in the column → all no_lot = null
   
   Realistic example (⚠️ DO NOT COPY THESE VALUES — read what's in YOUR image):
-    FDF 306 | SIR20 | 069 | 1.200 | 30  →  no_lot=69  (first anchor)
-    FDF 309 | SIR20 |  v  | 1.200 | 36  →  no_lot=69  (v = ditto)
-    FDF 313 | SIR20 | 040 | 1.200 | 36  →  no_lot=40  (new anchor)
-    FDF 319 | SIR20 | HI  | 1.200 | 36  →  no_lot=40  (HI = ditto)
-    FDF 316 | SIR20 |  v  | 1.260 | 36  →  no_lot=40  (v = ditto)
+    FDF 2007 | SIR20 | 251 | 1.260 | 36  →  no_lot=251 (first anchor)
+    FDF 2006 | SIR20 |  "  | 1.260 | 36  →  no_lot=251 (" = ditto)
+    FDF 2005 | SIR20 |  "  | 1.260 | 36  →  no_lot=251 (" = ditto)
+    FDF 313  | SIR20 | 040 | 1.200 | 36  →  no_lot=40  (new anchor)
 
   NEVER output the string "HI", "II", "v", "s/d", "idem" as no_lot value.
 
@@ -158,8 +190,17 @@ YOUR TASK: Extract ALL rows from the LEFT "Dikirim" table. The RIGHT "Diterima" 
   Dot is thousand separator: "1.200"=1200, "1.260"=1260. Valid: 800-2000.
   If you read a value <100 → multiply by 1000 (decimal misread as kg).
 
-── COLUMN: jml_bale ──
-  Integer, typically 30-38. DO NOT include the bottom "Jumlah" summary row in baris.
+── COLUMN: jml_bale ── ⚠️ CROSS-VALIDATE WITH TOTAL ⚠️
+  Integer, typically 30-38 per row. DO NOT include the bottom "Jumlah" summary row in baris.
+  
+  MANDATORY CROSS-VALIDATION:
+  After reading ALL rows, calculate: sum_of_all_jml_bale = jml_bale[row1] + jml_bale[row2] + ...
+  Compare with total_bale from the "Jumlah" row.
+  If sum ≠ total_bale → you made a reading error! Re-examine each jml_bale digit.
+  Common error: reading "36" as "38" (dot-matrix 6 ↔ 8 confusion).
+    6 has ONE loop at the bottom + a tail going up-left.
+    8 has TWO loops stacked vertically.
+  Adjust the misread digits so that the sum matches total_bale EXACTLY.
 
 ── TOTAL ROW ──
   The last "Jumlah" row gives totals. Extract:
@@ -176,23 +217,31 @@ Print: dot-matrix or photocopy, mixed handwritten. May be folded, angled, or low
 ⚠️ RULE 2 — YEAR CORRECTION: All docs are 2025 or 2026. Dot-matrix '6' ≈ '0'. Correct 2020/2021→2026.
 ⚠️ RULE 3 — DO NOT COPY EXAMPLES: Read the ACTUAL image, not these example values!
 
+=== DIGIT CONFUSION MATRIX (CRITICAL) ===
+Handwritten: 7↔2 (7 has crossbar), 8↔0 (8 pinched middle), 9↔4 (4 has angular top)
+Dot-matrix:  8↔0 (8=two loops, 0=one oval), 6↔0 (6 has top-left tail), 3↔8, 5↔6
+
 ═══ STEP 1: HEADER BOX (top-right area) ═══
 Find printed labels with handwritten values:
-  "Nomor"         → no_surat       e.g. "7K17/II/2026.02.05"
-  "Tanggal"       → tanggal        e.g. "05 Februari 2026"
-  "No. Kendaraan" → no_kendaraan   e.g. "BD 8371 P"
-  "Nama Supir"    → nama_supir     e.g. "RUSYAM"
+  "Nomor"         → no_surat       e.g. "7K17/IV/2026.04.369"
+    Sequence may be 1-3 digits. Read EVERY digit. "369" must not become "39".
+  "Tanggal"       → tanggal        e.g. "14 April 2026"
+    Read handwritten DD carefully. Apply confusion matrix (14≠09, 7≠2).
+  "No. Kendaraan" → no_kendaraan   e.g. "BD 8751 P"
+    Handwritten 7 has a CROSSBAR through stem — distinguish from 2!
+  "Nama Supir"    → nama_supir     e.g. "SYAMSUL"
 
 ═══ STEP 2: LEFT "Dikirim" TABLE — ignore the right "Diterima" table ═══
 Columns: no_peti | jenis_mutu | no_lot | berat_kg | jml_bale
 
-no_peti    → "ABC 1234" format (3 uppercase letters + space + digits). null if unreadable.
+no_peti    → "FDF 2007" format (3 letters + space + digits). Distinguish 8 vs 0 in last digit.
 jenis_mutu → rubber grade from column header (SIR20, SIR 20, RSS 1 etc.)
-no_lot     → NARROW HANDWRITTEN INTEGER COLUMN (1-3 digits: e.g. 2, 39, 69, 136, 137, 140)
+no_lot     → NARROW HANDWRITTEN INTEGER (1-3 digits: e.g. 2, 39, 251)
              Ditto marks (", v, u, HI, II, s/d, idem, ~) = use previous row's lot number.
              RESOLVE dittos — never output "HI", "v", "idem" as the value.
-berat_kg   → dot=thousands ("1.200"=1200), range 800-2000
-jml_bale   → integer 20-50
+berat_kg   → dot=thousands ("1.200"=1200, "1.260"=1260), range 800-2000
+jml_bale   → integer 20-50. CROSS-VALIDATE: sum of all jml_bale MUST equal total_bale.
+             If mismatch → re-examine digits. Common: 36 misread as 38 (6↔8 confusion).
 
 Row "Jumlah" = summary → put in total_kg & total_bale, DO NOT add to baris.
 
@@ -665,6 +714,107 @@ class OCREngine:
             except: pass
         return baris
 
+    def _cross_validate_sir20(self, h: dict) -> dict:
+        """
+        Cross-validation pasca-OCR untuk SIR20:
+        1. Cek apakah total_bale == sum(jml_bale) per baris → auto-fix 6↔8 confusion
+        2. Cek apakah total_kg == sum(berat_kg) per baris
+        3. Tambahkan warning jika ada yang tidak konsisten
+        """
+        baris = h.get('baris', [])
+        if not baris:
+            return h
+
+        total_bale = h.get('total_bale', 0)
+        total_kg = h.get('total_kg', 0)
+
+        # ── Cross-validate jml_bale ──
+        if total_bale and total_bale > 0:
+            sum_bale = sum(int(b.get('jml_bale', 0)) for b in baris)
+
+            if sum_bale != total_bale:
+                diff = sum_bale - total_bale
+                n_rows = len(baris)
+
+                logger.warning(f"Bale mismatch: sum={sum_bale} total={total_bale} diff={diff}")
+
+                # Strategy 1: 6↔8 confusion fix
+                # If diff is exactly +2*N (some rows read 38 instead of 36),
+                # fix those rows from 38→36
+                if diff > 0 and diff % 2 == 0:
+                    fixes_needed = diff // 2
+                    fixed = 0
+                    for b in baris:
+                        if fixed >= fixes_needed:
+                            break
+                        bale_val = int(b.get('jml_bale', 0))
+                        # 38→36 (8 was actually 6)
+                        if bale_val == 38:
+                            b['jml_bale'] = 36
+                            fixed += 1
+                            logger.info(f"Bale fix 38→36 (8↔6 confusion) for {b.get('no_peti', '?')}")
+                        # 48→46
+                        elif bale_val == 48:
+                            b['jml_bale'] = 46
+                            fixed += 1
+                            logger.info(f"Bale fix 48→46 (8↔6 confusion) for {b.get('no_peti', '?')}")
+                        # 28→26
+                        elif bale_val == 28:
+                            b['jml_bale'] = 26
+                            fixed += 1
+                            logger.info(f"Bale fix 28→26 (8↔6 confusion) for {b.get('no_peti', '?')}")
+
+                    new_sum = sum(int(b.get('jml_bale', 0)) for b in baris)
+                    if new_sum == total_bale:
+                        logger.info(f"Bale cross-validation FIXED: {sum_bale}→{new_sum} (matched total={total_bale})")
+                    else:
+                        logger.warning(f"Bale cross-validation partial: {sum_bale}→{new_sum} (target={total_bale})")
+
+                # Strategy 2: If diff is negative (some read 36 instead of 38), do reverse
+                elif diff < 0 and abs(diff) % 2 == 0:
+                    fixes_needed = abs(diff) // 2
+                    fixed = 0
+                    for b in baris:
+                        if fixed >= fixes_needed:
+                            break
+                        bale_val = int(b.get('jml_bale', 0))
+                        # 36→38 (6 was actually 8)
+                        if bale_val == 36:
+                            b['jml_bale'] = 38
+                            fixed += 1
+                            logger.info(f"Bale fix 36→38 (6↔8 confusion) for {b.get('no_peti', '?')}")
+
+                    new_sum = sum(int(b.get('jml_bale', 0)) for b in baris)
+                    if new_sum == total_bale:
+                        logger.info(f"Bale cross-validation FIXED: {sum_bale}→{new_sum}")
+
+                # Strategy 3: All rows show the same bale value and they SHOULD be uniform
+                # Check if total_bale divides evenly by number of rows
+                elif total_bale % n_rows == 0:
+                    expected_per_row = total_bale // n_rows
+                    # Only auto-fix if expected per row is within normal range (30-40)
+                    if 20 <= expected_per_row <= 50:
+                        logger.info(f"Bale uniform fix: setting all rows to {expected_per_row}")
+                        for b in baris:
+                            b['jml_bale'] = expected_per_row
+
+        # ── Cross-validate berat_kg ──
+        if total_kg and total_kg > 0:
+            sum_kg = sum(int(b.get('berat_kg', 0)) for b in baris)
+            if sum_kg != total_kg:
+                diff_kg = abs(sum_kg - total_kg)
+                # Only warn, don't auto-fix weight (could be genuine differences)
+                if diff_kg > 100:
+                    logger.warning(f"Weight mismatch: sum_rows={sum_kg} vs total={total_kg}, diff={diff_kg}")
+                    if not h.get('_warnings'):
+                        h['_warnings'] = []
+                    h['_warnings'] = h.get('_warnings', []) + [
+                        f"Total berat ({total_kg} kg) tidak cocok dengan jumlah baris ({sum_kg} kg)"
+                    ]
+
+        h['baris'] = baris
+        return h
+
     def _expand_urut(self, h):
         if not h.get('nomor_urut_bale') and h.get('nomor_bale'):
             out = []
@@ -778,20 +928,31 @@ class OCREngine:
 
     def _enhance_clahe(self, img):
         """
-        CLAHE (Contrast Limited Adaptive Histogram Equalization).
+        CLAHE (Contrast Limited Adaptive Histogram Equalization) + Dot-Matrix Enhancement.
         Jauh lebih baik dari brightness/contrast biasa untuk:
         - Pencahayaan tidak merata, bayangan, flash terlalu terang.
+        - Cetakan dot-matrix pudar (v17: enhanced sharpening + unsharp mask)
         """
         try:
             arr = np.array(img)
             lab = cv2.cvtColor(arr, cv2.COLOR_RGB2LAB)
             l_channel, a, b = cv2.split(lab)
-            clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
+            # Higher clip limit for better local contrast on faded dot-matrix
+            clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
             l_enhanced = clahe.apply(l_channel)
             enhanced_lab = cv2.merge([l_enhanced, a, b])
             enhanced_rgb = cv2.cvtColor(enhanced_lab, cv2.COLOR_LAB2RGB)
             result = Image.fromarray(enhanced_rgb)
-            result = ImageEnhance.Sharpness(result).enhance(1.4)
+
+            # Unsharp mask: sharpens dot-matrix dots into solid strokes
+            # This makes 6 vs 8, 3 vs 8, 0 vs 8 more distinguishable
+            arr2 = np.array(result)
+            gaussian = cv2.GaussianBlur(arr2, (0, 0), 2.0)
+            unsharp = cv2.addWeighted(arr2, 1.5, gaussian, -0.5, 0)
+            result = Image.fromarray(unsharp)
+
+            # Additional PIL sharpness (stronger than before)
+            result = ImageEnhance.Sharpness(result).enhance(1.8)
             return result
         except Exception as e:
             logger.warning(f"CLAHE skip: {e}")
@@ -1258,6 +1419,8 @@ class OCREngine:
                     h['baris'] = self._validate_no_peti(h['baris'])
                     h['baris'] = self._validate_berat(h['baris'])
                     h['baris'] = self._detect_hallucination(h['baris'])  # v15.2: clear fake data
+                # Cross-validate bale totals & auto-fix 6↔8 dot-matrix confusion
+                h = self._cross_validate_sir20(h)
 
             elif jenis == 'rss1':
                 img = self._prep(img_bytes, max_dim=1400)

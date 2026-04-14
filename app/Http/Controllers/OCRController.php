@@ -339,10 +339,26 @@ class OCRController extends Controller
 
                 // Kelompokkan baris (palet) berdasarkan no_lot
                 $groupedBaris = [];
+                $lastLotNo = 'TMP-' . rand(1000, 9999);
                 foreach ($baris as $b) {
-                    $lotNo = trim($b['no_lot'] ?? ('TMP-' . rand(1000, 9999)));
-                    if ($lotNo === '') $lotNo = 'TMP-' . rand(1000, 9999);
+                    $lotNo = trim($b['no_lot'] ?? '');
+                    
+                    // Jika no lot kosong atau mengandung tanda hubung/ditto mark, ikut baris sebelumnya
+                    $dittoMarks = ['"', '""', "''", '”', '“', '-', 'sda', 'sda.', 'sama', '^', '2']; 
+                    // Menambahkan '2' jika kebetulan OCR menterjemahkan " menjadi '2' 
+                    // (tetapi kita pastikan hanya replace jika bukan baris pertama, dll)
+                    
+                    if ($lotNo === '' || in_array(strtolower($lotNo), ['"', '""', "''", '”', '“', '-', 'sda', 'sda.', 'sama', '^'])) {
+                        $lotNo = $lastLotNo;
+                    }
+                    
+                    // Fallback jika masih kosong (misal baris pertama langsung kosong)
+                    if ($lotNo === '' || str_starts_with($lotNo, 'TMP-')) {
+                        $lotNo = 'TMP-' . rand(1000, 9999);
+                    }
+
                     $groupedBaris[$lotNo][] = $b;
+                    $lastLotNo = $lotNo;
                 }
 
                 foreach ($groupedBaris as $lotNo => $items) {
