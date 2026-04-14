@@ -3,7 +3,7 @@
 
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Berita Acara - {{ $shipment->purchaseOrder->po_number ?? $shipment->id }}</title>
+    <title>Berita Acara - {{ $group->ba_number ?? $group->id }}</title>
     <style>
         @page {
             margin: 20mm 15mm 20mm 15mm;
@@ -204,24 +204,28 @@
             9 => 'IX', 10 => 'X', 11 => 'XI', 12 => 'XII'
         ];
 
-        $dispatchDate = $shipment->dispatched_at ?? now();
+        $dispatchDate = $group->dispatched_at ?? now();
         $bulanAngka = $dispatchDate->format('n');
         $tahun = $dispatchDate->format('Y');
-        $nomorBA = 'IPMG.Bkl/BA/' . str_pad($shipment->id, 2, '0', STR_PAD_LEFT) . '/' . $bulanRomawi[$bulanAngka] . '/' . $tahun;
+        $nomorBA = $group->ba_number ?? ('IPMG.Bkl/BA/' . str_pad($group->id, 2, '0', STR_PAD_LEFT) . '/' . $bulanRomawi[$bulanAngka] . '/' . $tahun);
 
-        // Kumpulkan jenis mutu
-        $qualityTypes = $shipment->items->map(function($item) {
-            return $item->stockLot->quality_type ?? '-';
+        // Kumpulkan jenis mutu dari semua shipments
+        $qualityTypes = $group->shipments->flatMap(function($s) {
+            return $s->items->map(fn($i) => $i->stockLot->quality_type ?? '-');
         })->unique()->implode(', ');
 
-        // Total berat
-        $totalKg = $shipment->items->sum('qty_loaded_kg');
+        // Total berat dari semua shipments
+        $totalKg = $group->shipments->sum(function($s) {
+            return $s->items->sum('qty_loaded_kg');
+        });
 
-        // Total unit (SW/bale) - estimate dari detail
+        // Total units (SW) dari semua shipment items
         $totalUnits = 0;
-        foreach ($shipment->items as $item) {
-            if ($item->stockLot && $item->stockLot->details) {
-                $totalUnits += $item->stockLot->details->sum('quantity_unit');
+        foreach ($group->shipments as $shipment) {
+            foreach ($shipment->items as $item) {
+                if ($item->stockLot && $item->stockLot->details) {
+                    $totalUnits += $item->stockLot->details->sum('quantity_unit');
+                }
             }
         }
 
@@ -243,9 +247,7 @@
         // Terbilang hari
         $tglNarasi = $namaHari . ' tanggal ' . $dispatchDate->format('d') . ' bulan ' . $bulanIndo[$bulanAngka] . ' tahun ' . $tahun;
 
-        $contract = $shipment->purchaseOrder->contract ?? null;
-        $po = $shipment->purchaseOrder ?? null;
-        $buyerName = $contract->buyer_name ?? 'Pembeli';
+        $buyerName = $group->buyer_name ?? 'Pembeli';
     @endphp
 
     <!-- ===== HEADER ===== -->
@@ -280,30 +282,48 @@
             {{ $buyerName }} dengan penjelasan sbb :</p>
     </div>
 
-    <!-- ===== DETAIL KONTRAK / PO ===== -->
-    <table class="info-list">
-        <tr>
-            <td class="label">- &nbsp; Nomor Kontrak / SC</td>
-            <td class="separator">:</td>
-            <td class="value"><strong>{{ $contract->contract_number ?? '-' }}</strong></td>
-            <td class="date-col">tgl. {{ $contract->contract_date ? date('d-m-Y', strtotime($contract->contract_date)) : '-' }}</td>
-        </tr>
-        <tr>
-            <td class="label">- &nbsp; Nomor PO</td>
-            <td class="separator">:</td>
-            <td class="value">{{ $po->po_number ?? '-' }}</td>
-            <td class="date-col">tgl. {{ $po->po_date ? date('d-m-Y', strtotime($po->po_date)) : '-' }}</td>
-        </tr>
-        <tr>
-            <td class="label">- &nbsp; Jumlah menurut PO</td>
-            <td class="separator">:</td>
-            <td class="value">{{ number_format($po->qty_ordered_kg ?? 0, 0, ',', '.') }} Kg ({{ $totalUnits > 0 ? $totalUnits . ' SW' : '-' }})</td>
-            <td class="date-col"></td>
-        </tr>
-    </table>
+    <!-- ===== DETAIL KONTRAK / PO — LOOP SETIAP SHIPMENT ===== -->
+    @foreach($group->shipments as $shipmentIdx => $shipment)
+        @php
+            $contract = $shipment->purchaseOrder->contract ?? null;
+            $po = $shipment->purchaseOrder ?? null;
+            $shipmentKg = $shipment->items->sum('qty_loaded_kg');
+            $shipmentUnits = 0;
+            foreach ($shipment->items as $item) {
+                if ($item->stockLot && $item->stockLot->details) {
+                    $shipmentUnits += $item->stockLot->details->sum('quantity_unit');
+                }
+            }
+        @endphp
+        <table class="info-list">
+            <tr>
+                <td class="label">- &nbsp; Nomor Kontrak / SC</td>
+                <td class="separator">:</td>
+                <td class="value"><strong>{{ $contract->contract_number ?? '-' }}</strong></td>
+                <td class="date-col">tgl. {{ $contract->contract_date ? date('d-m-Y', strtotime($contract->contract_date)) : '-' }}</td>
+            </tr>
+            <tr>
+                <td class="label">- &nbsp; Nomor PO</td>
+                <td class="separator">:</td>
+                <td class="value">{{ $po->po_number ?? '-' }}</td>
+                <td class="date-col">tgl. {{ $po->po_date ? date('d-m-Y', strtotime($po->po_date)) : '-' }}</td>
+            </tr>
+            <tr>
+                <td class="label">- &nbsp; Jumlah menurut PO</td>
+                <td class="separator">:</td>
+                <td class="value">{{ number_format($shipmentKg, 0, ',', '.') }} Kg ({{ $shipmentUnits > 0 ? $shipmentUnits . ' SW' : '-' }})</td>
+                <td class="date-col"></td>
+            </tr>
+        </table>
+
+        @if($shipmentIdx < count($group->shipments) - 1)
+            <hr class="divider">
+        @endif
+    @endforeach
 
     <hr class="divider">
 
+    <!-- ===== TOTAL & PENGANGKUT ===== -->
     <table class="info-list">
         <tr>
             <td class="label">- &nbsp; Jumlah diangkut/dikirim</td>
@@ -320,10 +340,30 @@
         <tr>
             <td class="label">- &nbsp; Pengangkut/Penerima</td>
             <td class="separator">:</td>
-            <td class="value">{{ $buyerName }} atas kuasa {{ $shipment->transporter_name }}</td>
+            <td class="value">{{ $buyerName }} atas kuasa {{ $group->transporter_name }}</td>
             <td class="date-col"></td>
         </tr>
     </table>
+
+    <!-- ===== NOMOR SURAT KUASA (Multiple) ===== -->
+    @php
+        $suratKuasaList = $group->shipments
+            ->pluck('surat_kuasa_number')
+            ->filter()
+            ->values();
+    @endphp
+    @if($suratKuasaList->count() > 0)
+        <table class="info-list">
+            @foreach($suratKuasaList as $skIdx => $skNumber)
+                <tr>
+                    <td class="label">{{ $skIdx === 0 ? '- &nbsp; Nomor Surat Kuasa' : '' }}</td>
+                    <td class="separator">{{ $skIdx === 0 ? ':' : '' }}</td>
+                    <td class="value">{{ $skNumber }}</td>
+                    <td class="date-col">tgl. {{ $dispatchDate->format('d-m-Y') }}</td>
+                </tr>
+            @endforeach
+        </table>
+    @endif
 
     <!-- ===== KETERANGAN ===== -->
     <div class="keterangan">
@@ -371,11 +411,11 @@
         </tr>
         <tr>
             <td style="text-align: left;">
-                <span class="signature-name">{{ strtoupper($shipment->manager_name ?? '_______________') }}</span>
+                <span class="signature-name">{{ strtoupper($group->manager_name ?? '_______________') }}</span>
             </td>
             <td></td>
             <td style="text-align: right;">
-                <span class="signature-name">{{ strtoupper($shipment->krani_name ?? '_______________') }}</span>
+                <span class="signature-name">{{ strtoupper($group->krani_name ?? '_______________') }}</span>
             </td>
         </tr>
     </table>
@@ -393,7 +433,7 @@
         </tr>
         <tr>
             <td colspan="3" style="text-align: center;">
-                <span class="signature-name">{{ strtoupper($shipment->manager_name ?? '_______________') }}</span>
+                <span class="signature-name">{{ strtoupper($group->manager_name ?? '_______________') }}</span>
             </td>
         </tr>
     </table>

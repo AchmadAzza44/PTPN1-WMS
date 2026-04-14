@@ -1,13 +1,13 @@
 @extends('layouts.modern')
 
 @section('title', 'Data Pengiriman')
-@section('header', 'Data Pengiriman (Outbound)')
-@section('subheader', 'Kelola pengiriman barang dan surat jalan')
+@section('header', 'Data Pengiriman (Berita Acara)')
+@section('subheader', 'Kelola daftar Berita Acara pengiriman dan surat jalan')
 
 @section('actions')
     <a href="{{ route('ocr.index', ['type' => 'outbound']) }}" class="btn btn-orange">
         <i data-lucide="scan-text" style="width:15px;height:15px;"></i>
-        Buat Pengiriman Baru
+        Buat Berita Acara Baru
     </a>
 @endsection
 
@@ -43,11 +43,11 @@
 }
 .ship-id {
     font-family: var(--font-mono, monospace);
-    font-size: 19px;
+    font-size: 15px;
     font-weight: 900;
     color: #111827;
     letter-spacing: -0.02em;
-    line-height: 1.1;
+    line-height: 1.2;
 }
 .ship-id small {
     display: block;
@@ -131,14 +131,18 @@
 
 {{-- Summary mini-cards --}}
 @php
-    $total    = $shipments->total();
-    $draft    = $shipments->getCollection()->where('status','draft')->count();
-    $done     = $shipments->getCollection()->where('status','completed')->count();
-    $verified = $shipments->getCollection()->where('status','verified')->count();
+    // Mix items for summary
+    $totalGroups = $groups->total();
+    $totalStandalone = $standaloneShipments->count();
+    $total = $totalGroups + $totalStandalone;
+    
+    $draft = $groups->where('status','draft')->count() + $standaloneShipments->where('status','draft')->count();
+    $verified = $groups->where('status','verified')->count() + $standaloneShipments->where('status','verified')->count();
+    $done = $groups->where('status','completed')->count() + $standaloneShipments->where('status','completed')->count();
 @endphp
 <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6 anim-fade-up">
     @foreach([
-        ['label'=>'Total Pengiriman', 'val'=>number_format($total),    'icon'=>'truck',          'clr'=>'#4AADE4'],
+        ['label'=>'Total Berita Acara', 'val'=>number_format($total),    'icon'=>'truck',          'clr'=>'#4AADE4'],
         ['label'=>'Draft',            'val'=>number_format($draft),    'icon'=>'clock',          'clr'=>'#f4a11b'],
         ['label'=>'Terverifikasi',    'val'=>number_format($verified), 'icon'=>'shield-check',   'clr'=>'#4AADE4'],
         ['label'=>'Selesai',          'val'=>number_format($done),     'icon'=>'check-circle-2', 'clr'=>'#34a853'],
@@ -166,11 +170,11 @@
             <div style="width:34px;height:34px;border-radius:9px;background:rgba(244,161,27,0.1);display:flex;align-items:center;justify-content:center;">
                 <i data-lucide="list" style="width:15px;height:15px;color:#f4a11b;"></i>
             </div>
-            <span style="font-size:14px;font-weight:700;color:var(--text-primary);">Daftar Pengiriman</span>
+            <span style="font-size:14px;font-weight:700;color:var(--text-primary);">Daftar Berita Acara</span>
         </div>
         <div style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(248,250,252,0.9);">
             <i data-lucide="search" style="width:14px;height:14px;color:var(--text-muted);flex-shrink:0;"></i>
-            <input type="text" id="shipSearch" placeholder="Cari ekspedisi / tujuan..."
+            <input type="text" id="shipSearch" placeholder="Cari nomor BA / ekspedisi..."
                    oninput="filterShipments(this.value)"
                    style="border:none;background:transparent;font-size:13px;color:var(--text-primary);outline:none;width:180px;font-family:'Inter',sans-serif;">
             <button onclick="document.getElementById('shipSearch').value='';filterShipments('');"
@@ -185,35 +189,74 @@
         <table class="table-modern" id="shipmentsTable">
             <thead>
                 <tr>
-                    <th>ID / Tanggal</th>
-                    <th>Ekspedisi &amp; Supir</th>
-                    <th>Tujuan (Pembeli)</th>
+                    <th>Berita Acara / Tanggal</th>
+                    <th>Ekspedisi &amp; Pembeli</th>
+                    <th>Detail Pengiriman</th>
                     <th style="text-align:right;">Total Muatan</th>
                     <th style="text-align:center;">Status</th>
                     <th style="text-align:center;">Aksi</th>
                 </tr>
             </thead>
             <tbody id="shipmentsTbody">
-                @forelse($shipments as $shipment)
+                {{-- Grouped Shipments (Berita Acara) --}}
+                @foreach($groups as $group)
                 @php
-                    $searchVal = strtolower($shipment->transporter_name . ' ' . ($shipment->purchaseOrder->contract->buyer_name ?? ''));
+                    $searchVal = strtolower($group->ba_number . ' ' . $group->transporter_name . ' ' . $group->buyer_name);
                 @endphp
                 <tr data-search="{{ $searchVal }}">
                     <td>
-                        <span class="mono" style="font-weight:700;color:var(--text-primary);">#{{ $shipment->id }}</span>
-                        <p style="font-size:12px;color:var(--text-muted);margin:2px 0 0;">{{ $shipment->created_at->format('d M Y H:i') }}</p>
+                        <span class="mono" style="font-weight:700;color:var(--text-primary);font-size:12px;">{{ $group->ba_number ?? ('BA #' . $group->id) }}</span>
+                        <p style="font-size:11px;color:var(--text-muted);margin:2px 0 0;">{{ $group->created_at->format('d M Y H:i') }}</p>
                     </td>
                     <td>
-                        <p style="font-weight:600;color:var(--text-primary);margin:0;">{{ $shipment->transporter_name }}</p>
-                        <p style="font-size:12px;color:var(--text-secondary);margin:2px 0 0;">{{ $shipment->driver_name }} &bull; {{ $shipment->vehicle_plate }}</p>
+                        <p style="font-weight:600;color:var(--text-primary);margin:0;font-size:12px;">{{ $group->transporter_name }}</p>
+                        <p style="font-size:11px;color:var(--text-secondary);margin:2px 0 0;">{{ $group->buyer_name ?? '-' }}</p>
                     </td>
                     <td>
-                        <p style="font-weight:600;margin:0;">{{ $shipment->purchaseOrder->contract->buyer_name ?? '-' }}</p>
-                        <p style="font-size:12px;color:var(--text-muted);font-family:var(--font-mono);margin:2px 0 0;">{{ $shipment->purchaseOrder->contract->contract_number ?? '-' }}</p>
+                        <span style="font-size:12px;font-weight:bold;color:var(--text-primary);">{{ count($group->shipments) }} Dokumen (PO/Kontrak)</span>
                     </td>
                     <td style="text-align:right;">
-                        <span class="mono" style="font-weight:700;">{{ number_format($shipment->items->sum('qty_loaded_kg'), 0) }}</span>
-                        <span style="font-size:12px;color:var(--text-muted);margin-left:2px;">KG</span>
+                        <span class="mono" style="font-weight:700;color:#1e3a8a;">{{ number_format($group->totalWeight, 0) }}</span>
+                        <span style="font-size:11px;color:var(--text-muted);margin-left:2px;">KG</span>
+                    </td>
+                    <td style="text-align:center;">
+                        @if($group->status == 'completed')
+                            <span class="badge badge-green"><i data-lucide="check-circle-2" style="width:10px;height:10px;"></i>Selesai</span>
+                        @elseif($group->status == 'verified')
+                            <span class="badge badge-blue"><i data-lucide="shield-check" style="width:10px;height:10px;"></i>Terverifikasi</span>
+                        @else
+                            <span class="badge badge-orange"><i data-lucide="clock" style="width:10px;height:10px;"></i>Draft</span>
+                        @endif
+                    </td>
+                    <td style="text-align:center;">
+                        <a href="{{ route('shipments.show_group', $group->id) }}" class="btn btn-ghost" style="padding:6px 12px;font-size:12px;">
+                            Detail <i data-lucide="arrow-right" style="width:12px;height:12px;"></i>
+                        </a>
+                    </td>
+                </tr>
+                @endforeach
+
+                {{-- Standalone Shipments (Legacy) --}}
+                @foreach($standaloneShipments as $shipment)
+                @php
+                    $searchVal = strtolower($shipment->transporter_name . ' ' . ($shipment->purchaseOrder->contract->buyer_name ?? ''));
+                    $totalKg = $shipment->items->sum('qty_loaded_kg');
+                @endphp
+                <tr data-search="{{ $searchVal }}">
+                    <td>
+                        <span class="mono" style="font-weight:700;color:var(--text-primary);font-size:12px;">Pengiriman #{{ $shipment->id }}</span>
+                        <p style="font-size:11px;color:var(--text-muted);margin:2px 0 0;">{{ $shipment->created_at->format('d M Y H:i') }} (Legacy)</p>
+                    </td>
+                    <td>
+                        <p style="font-weight:600;color:var(--text-primary);margin:0;font-size:12px;">{{ $shipment->transporter_name }}</p>
+                        <p style="font-size:11px;color:var(--text-secondary);margin:2px 0 0;">{{ $shipment->purchaseOrder->contract->buyer_name ?? '-' }}</p>
+                    </td>
+                    <td>
+                        <span style="font-size:12px;font-weight:bold;color:var(--text-primary);">1 Dokumen (PO)</span>
+                    </td>
+                    <td style="text-align:right;">
+                        <span class="mono" style="font-weight:700;">{{ number_format($totalKg, 0) }}</span>
+                        <span style="font-size:11px;color:var(--text-muted);margin-left:2px;">KG</span>
                     </td>
                     <td style="text-align:center;">
                         @if($shipment->status == 'completed')
@@ -230,39 +273,40 @@
                         </a>
                     </td>
                 </tr>
-                @empty
+                @endforeach
+
+                @if($groups->isEmpty() && $standaloneShipments->isEmpty())
                 <tr><td colspan="6">
                     <div class="empty-state">
                         <div class="empty-state-icon"><i data-lucide="truck" style="width:30px;height:30px;color:var(--text-muted);"></i></div>
-                        <h3 style="font-size:15px;font-weight:700;color:var(--text-primary);margin:0;">Belum Ada Pengiriman</h3>
-                        <p style="font-size:13px;color:var(--text-muted);margin:0;">Mulai dengan membuat pengiriman baru via OCR</p>
+                        <h3 style="font-size:15px;font-weight:700;color:var(--text-primary);margin:0;">Belum Ada Berita Acara</h3>
+                        <p style="font-size:13px;color:var(--text-muted);margin:0;">Mulai dengan membuat pengiriman baru</p>
                         <a href="{{ route('ocr.index', ['type' => 'outbound']) }}" class="btn btn-orange">
-                            <i data-lucide="scan-text" style="width:14px;height:14px;"></i>Buat Pengiriman
+                            <i data-lucide="scan-text" style="width:14px;height:14px;"></i>Buat Berita Acara
                         </a>
                     </div>
                 </td></tr>
-                @endforelse
+                @endif
             </tbody>
         </table>
     </div>
 
     {{-- Mobile Cards --}}
     <div class="ship-mobile" style="padding-top:10px;padding-bottom:4px;">
-        @forelse($shipments as $shipment)
+        @foreach($groups as $group)
         @php
-            $searchVal  = strtolower($shipment->transporter_name . ' ' . ($shipment->purchaseOrder->contract->buyer_name ?? ''));
-            $totalKg    = $shipment->items->sum('qty_loaded_kg');
+            $searchVal = strtolower($group->ba_number . ' ' . $group->transporter_name . ' ' . $group->buyer_name);
         @endphp
         <div class="ship-card" data-ship data-search="{{ $searchVal }}">
             <div class="ship-card-head">
                 <div class="ship-id">
-                    <small>Pengiriman</small>
-                    #{{ $shipment->id }}
-                    <span style="font-size:11px;font-weight:500;color:#64748b;display:block;margin-top:2px;font-family:'Inter',sans-serif;">{{ $shipment->created_at->format('d M Y, H:i') }}</span>
+                    <small>Berita Acara</small>
+                    {{ $group->ba_number ?? ('BA #' . $group->id) }}
+                    <span style="font-size:11px;font-weight:500;color:#64748b;display:block;margin-top:2px;font-family:'Inter',sans-serif;">{{ $group->created_at->format('d M Y, H:i') }}</span>
                 </div>
-                @if($shipment->status == 'completed')
+                @if($group->status == 'completed')
                     <span class="badge badge-green" style="flex-shrink:0;font-size:11px;">Selesai</span>
-                @elseif($shipment->status == 'verified')
+                @elseif($group->status == 'verified')
                     <span class="badge badge-blue" style="flex-shrink:0;font-size:11px;">Terverifikasi</span>
                 @else
                     <span class="badge badge-orange" style="flex-shrink:0;font-size:11px;">Draft</span>
@@ -275,8 +319,8 @@
                         Ekspedisi
                     </span>
                     <span class="ship-val">
-                        {{ $shipment->transporter_name }}
-                        <span class="muted">{{ $shipment->driver_name }} &bull; {{ $shipment->vehicle_plate }}</span>
+                        {{ $group->transporter_name }}
+                        <span class="muted">{{ $group->driver_name }} &bull; {{ $group->vehicle_plate }}</span>
                     </span>
                 </div>
                 <div class="ship-row">
@@ -285,43 +329,44 @@
                         Tujuan
                     </span>
                     <span class="ship-val">
-                        {{ $shipment->purchaseOrder->contract->buyer_name ?? '-' }}
-                        <span class="muted" style="font-family:var(--font-mono);">{{ $shipment->purchaseOrder->contract->contract_number ?? '' }}</span>
+                        {{ $group->buyer_name ?? '-' }}
                     </span>
                 </div>
                 <div class="ship-row">
                     <span class="ship-key">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 3v18M3 12h18"/></svg>
-                        Muatan
+                        Muatan ({{ count($group->shipments) }} Dok)
                     </span>
                     <span class="ship-val">
-                        <span style="font-family:var(--font-mono);font-size:16px;font-weight:900;">{{ number_format($totalKg, 0) }}</span>
+                        <span style="font-family:var(--font-mono);font-size:16px;font-weight:900;color:#1e40af;">{{ number_format($group->totalWeight, 0) }}</span>
                         <span style="font-size:11px;color:#94a3b8;font-weight:400;"> KG</span>
                     </span>
                 </div>
             </div>
             <div class="ship-card-foot">
-                <a href="{{ route('shipments.show', $shipment->id) }}">
+                <a href="{{ route('shipments.show_group', $group->id) }}">
                     <i data-lucide="eye" style="width:14px;height:14px;color:#f4a11b;"></i>
-                    Lihat Detail
+                    Lihat Detail BA
                 </a>
             </div>
         </div>
-        @empty
+        @endforeach
+
+        @if($groups->isEmpty() && $standaloneShipments->isEmpty())
         <div class="mobile-empty-state">
             <i data-lucide="truck" style="width:40px;height:40px;color:#cbd5e1;margin-bottom:12px;"></i>
-            <h3 style="font-size:15px;font-weight:700;color:#374151;margin:0 0 6px;">Belum Ada Pengiriman</h3>
-            <p style="font-size:13px;color:#94a3b8;margin:0 0 14px;">Mulai dengan membuat pengiriman baru via OCR</p>
+            <h3 style="font-size:15px;font-weight:700;color:#374151;margin:0 0 6px;">Belum Ada Berita Acara</h3>
+            <p style="font-size:13px;color:#94a3b8;margin:0 0 14px;">Mulai dengan membuat pengiriman baru</p>
             <a href="{{ route('ocr.index', ['type' => 'outbound']) }}" class="btn btn-orange" style="display:inline-flex;">
                 <i data-lucide="scan-text" style="width:14px;height:14px;"></i>Buat Pengiriman
             </a>
         </div>
-        @endforelse
+        @endif
     </div>
 
-    @if($shipments->hasPages())
+    @if($groups->hasPages())
     <div style="padding:16px 24px;border-top:1px solid var(--border);">
-        {{ $shipments->links() }}
+        {{ $groups->links() }}
     </div>
     @endif
 </div>

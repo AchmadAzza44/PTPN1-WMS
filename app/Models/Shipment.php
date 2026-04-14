@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Shipment extends Model
 {
     protected $fillable = [
+        'shipment_group_id',
         'purchase_order_id',
         'transporter_name',
         'driver_name',
@@ -15,6 +16,7 @@ class Shipment extends Model
         'weather_condition',
         'dispatched_at',
         'do_number_manual',
+        'surat_kuasa_number',
         'documented_qty_kg',
         'signed_document_path',
         'status',
@@ -38,5 +40,14 @@ class Shipment extends Model
     public function purchaseOrder()
     {
         return $this->belongsTo(PurchaseOrder::class);
+    }
+
+    /**
+     * Relasi ke ShipmentGroup (Berita Acara parent).
+     * Nullable untuk backward compatibility.
+     */
+    public function group()
+    {
+        return $this->belongsTo(ShipmentGroup::class, 'shipment_group_id');
     }
 }

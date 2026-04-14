@@ -73,15 +73,15 @@ Route::middleware(['auth'])->group(function () {
     // ║  KRANI GUDANG (admin): Manajemen Outbound              ║
     // ╚══════════════════════════════════════════════════════════╝
     Route::middleware(['role:admin'])->group(function () {
-        // Buat Pengiriman Baru
+        // Buat Pengiriman Baru (multi-PO Berita Acara)
         Route::get('/shipments/create', [ShipmentController::class, 'create'])->name('shipments.create');
         Route::post('/shipments', [ShipmentController::class, 'store'])->name('shipments.store');
 
-        // Konfirmasi Detail DO/Qty
-        Route::put('/shipments/{id}/update-details', [ShipmentController::class, 'updateDetails'])->name('shipments.update_details');
+        // Konfirmasi Detail (operates on ShipmentGroup)
+        Route::put('/shipment-groups/{id}/update-details', [ShipmentController::class, 'updateDetails'])->name('shipments.update_details');
 
-        // Upload Dokumen Bertandatangan
-        Route::post('/shipments/{id}/upload-signed-doc', [ShipmentController::class, 'uploadSignedDoc'])->name('shipments.upload_signed_doc');
+        // Upload Dokumen Bertandatangan (operates on ShipmentGroup)
+        Route::post('/shipment-groups/{id}/upload-signed-doc', [ShipmentController::class, 'uploadSignedDoc'])->name('shipments.upload_signed_doc');
     });
 
     // ╔══════════════════════════════════════════════════════════╗
@@ -98,18 +98,22 @@ Route::middleware(['auth'])->group(function () {
     // Data Pengiriman & Verifikasi — Krani + Operator (perlu lihat untuk verifikasi)
     Route::middleware(['role:admin,operator'])->group(function () {
         Route::get('/shipments/verification', [ShipmentController::class, 'indexVerification'])->name('shipments.verification');
-        Route::post('/shipments/{id}/verify', [ShipmentController::class, 'verify'])->name('shipments.verify');
+        Route::post('/shipment-groups/{id}/verify', [ShipmentController::class, 'verify'])->name('shipments.verify');
 
         Route::get('/shipments', [ShipmentController::class, 'index'])->name('shipments.index');
 
+        // ShipmentGroup (Berita Acara) detail page
+        Route::get('/shipment-groups/{id}', [ShipmentController::class, 'showGroup'])->name('shipments.show_group')
+            ->where('id', '[0-9]+');
+
         // Cetak Surat — setelah verifikasi, Krani/Operator bisa cetak
         Route::get('/shipments/{id}/print-sj', [ShipmentController::class, 'printSuratJalan'])->name('shipments.print_sj');
-        Route::get('/shipments/{id}/print-ba', [ShipmentController::class, 'printBeritaAcara'])->name('shipments.print_ba');
+        Route::get('/shipment-groups/{id}/print-ba', [ShipmentController::class, 'printBeritaAcara'])->name('shipments.print_ba');
         Route::get('/shipments/{id}/print-sjt', [ShipmentController::class, 'printSuratJaminan'])->name('shipments.print_sjt');
 
-        // ⚠️ Wildcard HARUS paling bawah agar tidak menangkap /verification, /print-sj, dll
+        // ⚠️ Wildcard HARUS paling bawah agar tidak menangkap routes di atas
         Route::get('/shipments/{shipment}', [ShipmentController::class, 'show'])->name('shipments.show')
-            ->where('shipment', '[0-9]+'); // Hanya terima angka, bukan string!
+            ->where('shipment', '[0-9]+');
     });
 
     // ╔══════════════════════════════════════════════════════════╗
