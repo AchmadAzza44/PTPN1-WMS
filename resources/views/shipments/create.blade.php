@@ -19,15 +19,33 @@
                             @php 
                                 $foto = request('foto_path') ?? $preFill['foto_path'];
                             @endphp
-                            <img src="{{ url('/cloud-storage/' . $foto) }}" alt="Dokumen" class="w-full h-auto object-top rounded-lg block">
+                            <img src="{{ url('/cloud-storage/' . $foto) }}" id="mainDocumentPreview" alt="Dokumen" class="w-full h-auto object-top rounded-lg block">
+                            <div id="noDocumentPreview" class="text-center p-6 hidden">
+                                <div class="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center mx-auto mb-3">
+                                    <i data-lucide="image-off" class="w-8 h-8 text-slate-400"></i>
+                                </div>
+                                <p class="text-sm font-bold text-slate-500">Preview Tidak Tersedia</p>
+                            </div>
                         @else
-                            <div class="text-center p-6">
+                            <img src="" id="mainDocumentPreview" alt="Dokumen" class="w-full h-auto object-top rounded-lg hidden">
+                            <div id="noDocumentPreview" class="text-center p-6">
                                 <div class="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center mx-auto mb-3">
                                     <i data-lucide="image-off" class="w-8 h-8 text-slate-400"></i>
                                 </div>
                                 <p class="text-sm font-bold text-slate-500">Preview Tidak Tersedia</p>
                                 <p class="text-xs text-slate-400 mt-1">Pengiriman ini dibuat secara manual atau <br>tidak memiliki lampiran foto OCR.</p>
                             </div>
+                        @endif
+                    </div>
+                    
+                    <div id="documentThumbnails" class="flex gap-2 mt-3 overflow-x-auto pb-2 custom-scrollbar">
+                        @if(request('foto_path') || (!empty($preFill) && !empty($preFill['foto_path'])))
+                            @php 
+                                $foto = request('foto_path') ?? $preFill['foto_path'];
+                            @endphp
+                            <button type="button" onclick="switchDocumentImage('{{ url('/cloud-storage/' . $foto) }}', this)" class="thumbnail-btn flex-shrink-0 border-2 border-blue-500 rounded-lg overflow-hidden w-14 h-14 opacity-100 transition-opacity">
+                                <img src="{{ url('/cloud-storage/' . $foto) }}" class="w-full h-full object-cover">
+                            </button>
                         @endif
                     </div>
                 </div>
@@ -394,7 +412,7 @@
                 </div>
                 <div class="pallet-container mt-2 hidden p-2 bg-slate-50 border border-slate-100 rounded-lg">
                     <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1"><i data-lucide="layers" class="w-3 h-3 inline mr-1"></i> Pilih Palet (Opsional)</label>
-                    <div class="pallet-list grid grid-cols-2 md:grid-cols-3 gap-1.5"></div>
+                    <div class="pallet-list grid grid-cols-2 md:grid-cols-4 gap-1.5 max-h-40 overflow-y-auto custom-scrollbar pr-1"></div>
                 </div>
             `;
 
@@ -690,6 +708,33 @@
                 }
             }
 
+            if (previewUrl) {
+                const mainImg = document.getElementById('mainDocumentPreview');
+                mainImg.src = previewUrl;
+                mainImg.classList.remove('hidden');
+                mainImg.classList.add('block');
+                
+                const noPreview = document.getElementById('noDocumentPreview');
+                if(noPreview) {
+                    noPreview.classList.add('hidden');
+                    noPreview.classList.remove('block');
+                }
+                
+                const thumbContainer = document.getElementById('documentThumbnails');
+                
+                document.querySelectorAll('.thumbnail-btn').forEach(b => {
+                    b.classList.remove('border-blue-500', 'opacity-100');
+                    b.classList.add('border-transparent', 'opacity-60');
+                });
+                
+                const thumbBtn = document.createElement('button');
+                thumbBtn.type = 'button';
+                thumbBtn.className = 'thumbnail-btn flex-shrink-0 border-2 border-blue-500 rounded-lg overflow-hidden w-14 h-14 opacity-100 transition-opacity';
+                thumbBtn.onclick = function() { switchDocumentImage(previewUrl, this); };
+                thumbBtn.innerHTML = `<img src="${previewUrl}" class="w-full h-full object-cover">`;
+                thumbContainer.appendChild(thumbBtn);
+            }
+
             // Trigger Recalculate
             const qtyInput = container.querySelector('.entry-qty-input');
             if (qtyInput && qtyInput.value) {
@@ -716,5 +761,15 @@
                 addEntry();
             }
         });
+        
+        function switchDocumentImage(url, btn) {
+            document.getElementById('mainDocumentPreview').src = url;
+            document.querySelectorAll('.thumbnail-btn').forEach(b => {
+                b.classList.remove('border-blue-500', 'opacity-100');
+                b.classList.add('border-transparent', 'opacity-60');
+            });
+            btn.classList.add('border-blue-500', 'opacity-100');
+            btn.classList.remove('border-transparent', 'opacity-60');
+        }
     </script>
 @endsection

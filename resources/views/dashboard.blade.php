@@ -246,82 +246,115 @@
         </div>
     </div>
 
-    <div id="heatmap-grid" class="p-4 rounded-xl"
-         style="background:rgba(241,245,249,0.4);border:1px solid rgba(226,232,240,0.6);min-height:180px;display:flex;flex-wrap:wrap;gap:16px;">
-        @foreach($groupedSirStocks as $prefix => $lotGroup)
-            @php
-                // Ambil status dari lot terakhir pembentuk grup ini
-                $lastStock = $lotGroup->last();
-                $bgColor = match($lastStock->status) {
-                    'blue'   => 'var(--blue)',
-                    'yellow' => 'var(--orange)',
-                    'orange' => '#fdba74',
-                    default  => '#dde3ea'
-                };
-                $statusLabel = match($lastStock->status) {
-                    'blue'   => 'Tersedia',
-                    'yellow' => 'Booked',
-                    'orange' => 'Hold',
-                    default  => 'Kosong'
-                };
-                // 1 Lot (grup) = 8 Pallets maksimum secara konseptual
-                $palletsCount = 8;
-            @endphp
-            <div class="warehouse-lot"
-                 style="background:rgba(255,255,255,0.7);border:1px solid rgba(203,213,225,0.6);border-radius:10px;padding:8px;width:calc(20% - 13px);min-width:140px;
-                        display:flex;flex-direction:column;gap:6px;opacity:0;animation:heatFadeIn 0.4s ease-out {{ $loop->index * 0.05 }}s forwards;">
-                
-                <div style="display:flex;justify-content:space-between;align-items:center;">
-                    <span style="font-size:11px;font-weight:800;color:var(--text-secondary);font-family:monospace;">{{ $prefix }}</span>
-                    <span style="width:8px;height:8px;border-radius:50%;background:{{ $bgColor }};" title="{{ $statusLabel }}"></span>
-                </div>
-                
-                <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:4px;">
-                    @php
-                        // Satu grup ini sebenarnya merepresentasikan 1 Lot. 
-                        // Kita ambil Lot tersebut dan rincian paletnya.
-                        $lot = $lotGroup->first();
-                        $details = $lot ? $lot->details : collect();
-                    @endphp
-                    @for($p = 0; $p < $palletsCount; $p++)
-                        @php
-                            // Ambil detail palet aktual di indeks ini
-                            $actualDetail = $details->get($p);
-                            $palletColor = $actualDetail ? $bgColor : '#e2e8f0'; // Kosong jika belum terisi
-                            
-                            $palletNumberText = '';
-                            if ($actualDetail) {
-                                $fdf = $actualDetail->fdf_number ?? ''; // e.g. "FDF 1120"
-                                $palletNumberText = trim(str_replace('FDF', '', strtoupper($fdf)));
-                            }
-                            
-                            $palletLabel = $actualDetail ? "Lot: {$lot->lot_number} | $statusLabel" : "Slot Kosong";
-                        @endphp
-                        <div style="background:{{ $palletColor }};height:28px;border-radius:4px;box-shadow:inset 0 0 2px rgba(0,0,0,0.1);cursor:pointer;transition:transform 0.2s;display:flex;align-items:center;justify-content:center;color:white;font-size:9px;font-weight:700;overflow:hidden;"
-                             title="{{ $palletLabel }}"
-                             onmouseover="this.style.transform='scale(1.15)'"
-                             onmouseout="this.style.transform='scale(1)'">
-                             {{ $palletNumberText }}
-                        </div>
-                    @endfor
-                </div>
-            </div>
-        @endforeach
+    @php
+        $blueLots = [];
+        $yellowLots = [];
+        $orangeLots = [];
+        $emptyLots = [];
         
-        {{-- Empty Lot Group Placeholders --}}
-        @for($i = 0; $i < max(0, 12 - $groupedSirStocks->count()); $i++)
-            <div style="background:rgba(226,232,240,0.2);border:1px dashed rgba(203,213,225,0.6);border-radius:10px;padding:8px;width:calc(20% - 13px);min-width:140px;display:flex;flex-direction:column;gap:6px;">
-                <div style="display:flex;justify-content:space-between;align-items:center;">
-                    <span style="font-size:10px;font-weight:600;color:var(--text-muted);">Sisa Slot</span>
-                    <span style="width:8px;height:8px;border-radius:50%;background:#e2e8f0;"></span>
-                </div>
-                <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:4px;opacity:0.4;">
-                    @for($p = 0; $p < 8; $p++)
-                        <div style="background:#e2e8f0;height:24px;border-radius:4px;"></div>
-                    @endfor
+        foreach($groupedSirStocks as $prefix => $lotGroup) {
+            $lastStock = $lotGroup->last();
+            if ($lastStock->status === 'blue') {
+                $blueLots[$prefix] = $lotGroup;
+            } elseif ($lastStock->status === 'yellow') {
+                $yellowLots[$prefix] = $lotGroup;
+            } elseif ($lastStock->status === 'orange') {
+                $orangeLots[$prefix] = $lotGroup;
+            } else {
+                $emptyLots[$prefix] = $lotGroup;
+            }
+        }
+        
+        $groups = [
+            ['title' => 'Tersedia (Biru)', 'data' => $blueLots],
+            ['title' => 'Booked (Kuning)', 'data' => $yellowLots],
+            ['title' => 'Hold (Orange)', 'data' => $orangeLots],
+            ['title' => 'Kosong', 'data' => $emptyLots],
+        ];
+    @endphp
+
+    <div class="space-y-6">
+        @foreach($groups as $group)
+            @if(count($group['data']) > 0 || $group['title'] === 'Kosong')
+            <div class="lot-group-section">
+                <!-- <h4 style="font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:12px;">{{ $group['title'] }}</h4> -->
+                <div id="heatmap-grid-{{ Str::slug($group['title']) }}" class="p-4 rounded-xl"
+                     style="background:rgba(241,245,249,0.4);border:1px solid rgba(226,232,240,0.6);min-height:100px;display:flex;flex-wrap:wrap;gap:16px;">
+                    
+                    @foreach($group['data'] as $prefix => $lotGroup)
+                        @php
+                            $lastStock = $lotGroup->last();
+                            $bgColor = match($lastStock->status) {
+                                'blue'   => 'var(--blue)',
+                                'yellow' => 'var(--orange)',
+                                'orange' => '#fdba74',
+                                default  => '#dde3ea'
+                            };
+                            $statusLabel = match($lastStock->status) {
+                                'blue'   => 'Tersedia',
+                                'yellow' => 'Booked',
+                                'orange' => 'Hold',
+                                default  => 'Kosong'
+                            };
+                            $palletsCount = 8;
+                        @endphp
+                        <div class="warehouse-lot"
+                             style="background:rgba(255,255,255,0.7);border:1px solid rgba(203,213,225,0.6);border-radius:10px;padding:8px;width:calc(20% - 13px);min-width:140px;
+                                    display:flex;flex-direction:column;gap:6px;opacity:0;animation:heatFadeIn 0.4s ease-out {{ $loop->index * 0.05 }}s forwards;">
+                            
+                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                                <span style="font-size:11px;font-weight:800;color:var(--text-secondary);font-family:monospace;">{{ $prefix }}</span>
+                                <span style="width:8px;height:8px;border-radius:50%;background:{{ $bgColor }};" title="{{ $statusLabel }}"></span>
+                            </div>
+                            
+                            <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:4px;">
+                                @php
+                                    $lot = $lotGroup->first();
+                                    $details = $lot ? $lot->details : collect();
+                                @endphp
+                                @for($p = 0; $p < $palletsCount; $p++)
+                                    @php
+                                        $actualDetail = $details->get($p);
+                                        $palletColor = $actualDetail ? $bgColor : '#e2e8f0'; 
+                                        
+                                        $palletNumberText = '';
+                                        if ($actualDetail) {
+                                            $fdf = $actualDetail->fdf_number ?? '';
+                                            $palletNumberText = trim(str_replace('FDF', '', strtoupper($fdf)));
+                                        }
+                                        
+                                        $palletLabel = $actualDetail ? "Lot: {$lot->lot_number} | $statusLabel" : "Slot Kosong";
+                                    @endphp
+                                    <div style="background:{{ $palletColor }};height:28px;border-radius:4px;box-shadow:inset 0 0 2px rgba(0,0,0,0.1);cursor:pointer;transition:transform 0.2s;display:flex;align-items:center;justify-content:center;color:white;font-size:9px;font-weight:700;overflow:hidden;"
+                                         title="{{ $palletLabel }}"
+                                         onmouseover="this.style.transform='scale(1.15)'"
+                                         onmouseout="this.style.transform='scale(1)'">
+                                         {{ $palletNumberText }}
+                                    </div>
+                                @endfor
+                            </div>
+                        </div>
+                    @endforeach
+
+                    @if($group['title'] === 'Kosong')
+                        @for($i = 0; $i < max(0, 12 - $groupedSirStocks->count()); $i++)
+                            <div style="background:rgba(226,232,240,0.2);border:1px dashed rgba(203,213,225,0.6);border-radius:10px;padding:8px;width:calc(20% - 13px);min-width:140px;display:flex;flex-direction:column;gap:6px;">
+                                <div style="display:flex;justify-content:space-between;align-items:center;">
+                                    <span style="font-size:10px;font-weight:600;color:var(--text-muted);">Sisa Slot</span>
+                                    <span style="width:8px;height:8px;border-radius:50%;background:#e2e8f0;"></span>
+                                </div>
+                                <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:4px;opacity:0.4;">
+                                    @for($p = 0; $p < 8; $p++)
+                                        <div style="background:#e2e8f0;height:24px;border-radius:4px;"></div>
+                                    @endfor
+                                </div>
+                            </div>
+                        @endfor
+                    @endif
                 </div>
             </div>
-        @endfor
+            @endif
+        @endforeach
     </div>
 </div>
 

@@ -89,7 +89,7 @@
                 <p style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin:0 0 8px 0;">File Dokumen</p>
                 <div id="dropzoneEl"
                      :style="dragging ? 'border-color:{{ $hex }};background:{{ $hexAlpha }}0.05);transform:scale(1.005);' : ''"
-                     style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 20px;border:2px dashed #cbd5e1;border-radius:14px;cursor:pointer;transition:all 0.25s;background:#fafbfc;text-align:center;"
+                     style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px;border:2px dashed #cbd5e1;border-radius:14px;cursor:pointer;transition:all 0.25s;background:#fafbfc;text-align:center;"
                      @dragover.prevent="dragging=true"
                      @dragleave.prevent="dragging=false"
                      @drop.prevent="dragging=false; $refs.fi.files=$event.dataTransfer.files; handleFile($event.dataTransfer.files[0])"
@@ -98,10 +98,10 @@
                      onmouseout="if(!this.classList.contains('has-file'))this.style.borderColor='#cbd5e1'">
 
                     <div id="drop-content">
-                        <div style="width:48px;height:48px;background:white;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,0.08);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;border:1px solid #e9eef4;">
-                            <i data-lucide="image-plus" style="width:22px;height:22px;color:{{ $hex }};"></i>
+                        <div style="width:40px;height:40px;background:white;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.08);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;border:1px solid #e9eef4;">
+                            <i data-lucide="image-plus" style="width:18px;height:18px;color:{{ $hex }};"></i>
                         </div>
-                        <p style="font-size:13px;margin:0;color:var(--text-secondary);">
+                        <p style="font-size:12px;margin:0;color:var(--text-secondary);">
                             <span style="font-weight:700;color:{{ $hex }};">Klik upload</span>
                             <span style="color:var(--text-muted);"> atau drag & drop</span>
                         </p>
@@ -125,12 +125,12 @@
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                     @foreach($docs as $i => $doc)
                     <label class="jenis-label {{ $isOutbound ? 'jenis-outbound' : 'jenis-inbound' }}"
-                           style="display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:10px;border:2px solid #e2e8f0;background:white;cursor:pointer;transition:all 0.2s;">
+                           style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;border:2px solid #e2e8f0;background:white;cursor:pointer;transition:all 0.2s;">
                         <input type="radio" name="jenis" value="{{ $doc['val'] }}" style="display:none;" {{ $i === 0 ? 'checked' : '' }}>
-                        <div style="width:30px;height:30px;border-radius:8px;background:{{ $hexAlpha }}0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                            <i data-lucide="{{ $doc['icon'] }}" style="width:14px;height:14px;color:{{ $hex }};"></i>
+                        <div style="width:24px;height:24px;border-radius:6px;background:{{ $hexAlpha }}0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i data-lucide="{{ $doc['icon'] }}" style="width:12px;height:12px;color:{{ $hex }};"></i>
                         </div>
-                        <span style="font-size:12px;font-weight:700;color:var(--text-primary);">{{ $doc['label'] }}</span>
+                        <span style="font-size:11px;font-weight:700;color:var(--text-primary);">{{ $doc['label'] }}</span>
                     </label>
                     @endforeach
                 </div>
