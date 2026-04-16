@@ -123,6 +123,7 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['role:admin,operator'])->group(function () {
         Route::get('/ocr', [OCRController::class, 'index'])->name('ocr.index');
         Route::post('/ocr', [OCRController::class, 'store'])->name('ocr.store');
+        Route::post('/ocr/store-inline', [OCRController::class, 'storeInline'])->name('ocr.store_inline');
         Route::get('/ocr/manual', [OCRController::class, 'manual'])->name('ocr.manual');
         Route::get('/ocr/waiting/{id}', [OCRController::class, 'waiting'])->name('ocr.waiting');
         Route::get('/ocr/status/{id}', [OCRController::class, 'status'])->name('ocr.status');

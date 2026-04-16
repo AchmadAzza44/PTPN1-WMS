@@ -137,6 +137,77 @@
         </div>
     </div>
 
+    <!-- ══════════════════════════════════════════════ -->
+    <!-- IN-FORM OCR SCANNER MODAL & OVERLAY            -->
+    <!-- ══════════════════════════════════════════════ -->
+    <div id="ocrModal" class="fixed inset-0 z-50 hidden bg-slate-900/50 backdrop-blur-sm flex items-center justify-center anim-fade-in">
+        <div class="bg-white max-w-md w-full rounded-2xl shadow-2xl mx-4 overflow-hidden transform scale-95 transition-all outline outline-4 outline-white/20">
+            <!-- Modal Header -->
+            <div class="bg-gradient-to-r from-blue-600 to-indigo-600 p-4 text-white flex justify-between items-center">
+                <h3 class="font-bold flex items-center">
+                    <i data-lucide="scan-line" class="w-5 h-5 mr-2"></i>
+                    Auto-Fill OCR Dokumen
+                </h3>
+                <button type="button" onclick="closeOcrModal()" class="text-blue-100 hover:text-white transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body: Step 1 (Upload Form) -->
+            <div id="ocrStepUpload" class="p-6">
+                <p class="text-sm text-slate-500 mb-4">Pilih atau foto dokumen (Surat Kuasa / DO) untuk PO <strong id="ocrTargetLabel" class="text-slate-800">#...</strong>. Sistem AI akan membaca data dan mengisinya otomatis untuk Anda secara instan.</p>
+                <form id="inlineOcrForm" onsubmit="submitInlineOcr(event)">
+                    <input type="hidden" id="ocrTargetIdx" value="">
+                    
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Jenis Dokumen</label>
+                    <select id="ocrJenis" required class="block w-full border-slate-200 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500 mb-4 bg-slate-50">
+                        <option value="surat_kuasa">Surat Kuasa</option>
+                        <option value="do">Delivery Order (DO)</option>
+                    </select>
+
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Foto Dokumen</label>
+                    <div class="border-2 border-dashed border-slate-300 rounded-xl p-4 text-center hover:bg-slate-50 hover:border-blue-400 transition-colors cursor-pointer relative">
+                        <input type="file" id="ocrFile" required accept="image/*" capture="environment" onchange="previewOcrFile(this)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                        <div id="ocrFilePreview" class="hidden flex flex-col items-center">
+                            <span class="w-10 h-10 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-2">
+                                <i data-lucide="check" class="w-5 h-5"></i>
+                            </span>
+                            <span class="text-sm font-bold text-green-700" id="ocrFileName">foto.jpg</span>
+                        </div>
+                        <div id="ocrFilePrompt" class="flex flex-col items-center">
+                            <i data-lucide="camera" class="w-8 h-8 text-slate-400 mb-2"></i>
+                            <span class="text-sm font-bold text-slate-600">Ketuk untuk Membuka Kamera</span>
+                            <span class="text-xs text-slate-400">atau Pilih dari Galeri</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex justify-end">
+                        <button type="submit" id="ocrSubmitBtn" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 transition-all flex items-center">
+                            <i data-lucide="upload-cloud" class="w-4 h-4 mr-2"></i> Mulai Scan
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Modal Body: Step 2 (Processing/Polling) -->
+            <div id="ocrStepProcess" class="p-8 hidden flex flex-col items-center text-center">
+                <div class="relative w-20 h-20 mb-4">
+                    <div class="absolute inset-0 border-4 border-slate-100 rounded-full"></div>
+                    <div class="absolute inset-0 border-4 border-blue-500 rounded-full border-t-transparent animate-spin"></div>
+                    <i data-lucide="brain-circuit" class="w-8 h-8 text-blue-600 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></i>
+                </div>
+                <h4 class="font-bold text-slate-800 text-lg">AI Sedang Membaca Dokumen...</h4>
+                <p class="text-sm text-slate-500 mt-2">Harap tunggu sebentar, kami merangkai data Anda.</p>
+                
+                <!-- Skeleton Loader -->
+                <div class="w-full mt-6 space-y-3">
+                    <div class="h-8 bg-slate-100 rounded-lg w-full animate-pulse"></div>
+                    <div class="h-8 bg-slate-100 rounded-lg w-3/4 mx-auto animate-pulse"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script>
         let stocks = @json($stocks);
@@ -183,14 +254,19 @@
 
             entryDiv.innerHTML = `
                 <div class="flex justify-between items-start mb-4">
-                    <h3 class="text-sm font-bold text-amber-700 uppercase tracking-wider flex items-center">
+                    <h3 class="text-sm font-bold text-amber-700 uppercase tracking-wider flex items-center mt-1">
                         <i data-lucide="package" class="w-4 h-4 mr-2"></i>
                         <span class="entry-label">PO / Surat Kuasa #${idx + 1}</span>
                     </h3>
-                    ${idx > 0 ? `
-                    <button type="button" onclick="removeEntry(this)" class="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Hapus entry ini">
-                        <i data-lucide="trash-2" class="w-4 h-4"></i>
-                    </button>` : ''}
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="openOcrModal(${idx})" class="px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 border border-blue-200 rounded-lg text-xs font-bold flex items-center transition-colors shadow-sm" title="Scan pakai Kamera/OCR">
+                            <i data-lucide="camera" class="w-3.5 h-3.5 mr-1.5"></i> Scan OCR
+                        </button>
+                        ${idx > 0 ? `
+                        <button type="button" onclick="removeEntry(this)" class="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 border border-transparent hover:border-red-200 rounded-lg transition-colors" title="Hapus entry ini">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>` : ''}
+                    </div>
                 </div>
 
                 <!-- Data Dokumen -->
@@ -482,6 +558,153 @@
 
             calculateEntryTotal(entryIdx);
             if (window.lucide) window.lucide.createIcons();
+        }
+
+        // ── IN-FORM OCR SCANNER LOGIC ──
+        
+        let ocrPollInterval = null;
+
+        function openOcrModal(idx) {
+            document.getElementById('ocrTargetIdx').value = idx;
+            document.getElementById('ocrTargetLabel').textContent = '#' + (idx + 1);
+            
+            // Reset modal state
+            document.getElementById('inlineOcrForm').reset();
+            document.getElementById('ocrFilePreview').classList.add('hidden');
+            document.getElementById('ocrFilePrompt').classList.remove('hidden');
+            document.getElementById('ocrStepUpload').classList.remove('hidden');
+            document.getElementById('ocrStepProcess').classList.add('hidden');
+            
+            // Show Modal
+            const modal = document.getElementById('ocrModal');
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.firstElementChild.classList.remove('scale-95'), 10);
+        }
+
+        function closeOcrModal() {
+            const modal = document.getElementById('ocrModal');
+            modal.firstElementChild.classList.add('scale-95');
+            setTimeout(() => modal.classList.add('hidden'), 200);
+            if (ocrPollInterval) clearInterval(ocrPollInterval);
+        }
+
+        function previewOcrFile(input) {
+            if (input.files && input.files[0]) {
+                document.getElementById('ocrFilePrompt').classList.add('hidden');
+                document.getElementById('ocrFilePreview').classList.remove('hidden');
+                document.getElementById('ocrFileName').textContent = input.files[0].name;
+            }
+        }
+
+        async function submitInlineOcr(e) {
+            e.preventDefault();
+            
+            const fileInput = document.getElementById('ocrFile');
+            const jenisInput = document.getElementById('ocrJenis');
+            const submitBtn = document.getElementById('ocrSubmitBtn');
+            
+            if (!fileInput.files[0]) return;
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 mr-2 animate-spin"></i> Mengunggah...';
+            if (window.lucide) window.lucide.createIcons();
+
+            const formData = new FormData();
+            formData.append('document', fileInput.files[0]);
+            formData.append('jenis', jenisInput.value);
+            formData.append('type', 'outbound');
+            formData.append('_token', '{{ csrf_token() }}');
+
+            try {
+                const response = await fetch('{{ route("ocr.store_inline") }}', {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'Accept': 'application/json' }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Switch to processing view
+                    document.getElementById('ocrStepUpload').classList.add('hidden');
+                    document.getElementById('ocrStepProcess').classList.remove('hidden');
+                    
+                    // Start polling
+                    pollOcrStatus(data.job_id);
+                } else {
+                    throw new Error(data.message || 'Gagal mengirim gambar');
+                }
+            } catch (err) {
+                alert('Oops: ' + err.message);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i data-lucide="upload-cloud" class="w-4 h-4 mr-2"></i> Mulai Scan';
+                if (window.lucide) window.lucide.createIcons();
+            }
+        }
+
+        async function pollOcrStatus(jobId) {
+            ocrPollInterval = setInterval(async () => {
+                try {
+                    const res = await fetch(`/ocr/status/${jobId}`);
+                    const data = await res.json();
+                    
+                    if (data.status === 'done' || data.status === 'failed') {
+                        clearInterval(ocrPollInterval);
+                        
+                        if (data.status === 'done' && data.hasil) {
+                            applyOcrResultToEntry(data.hasil, data.preview_url);
+                            closeOcrModal();
+                        } else {
+                            alert('Gagal membaca dokumen: AI tidak dapat menemukan kecocokan yang pas pada kualitas gambar tersebut.');
+                            closeOcrModal();
+                        }
+                    }
+                } catch (err) {
+                    console.error('Polling error', err);
+                }
+            }, 3000); // Pool every 3 seconds
+        }
+
+        function applyOcrResultToEntry(hasil, previewUrl) {
+            const idx = document.getElementById('ocrTargetIdx').value;
+            const container = document.querySelector(`.entry-block[data-entry-index="${idx}"]`);
+            if (!container) return;
+
+            // Fill inputs gracefully (only if empty or if we want to overwrite)
+            const inputs = {
+                'contract_number': hasil.contract_number_ref,
+                'do_number_manual': hasil.do_number_manual,
+                'surat_kuasa_number': hasil.surat_kuasa_number,
+                'documented_qty_kg': hasil.documented_qty_kg
+            };
+
+            for (const [key, val] of Object.entries(inputs)) {
+                if (val) {
+                    const el = container.querySelector(`input[name="entries[${idx}][${key}]"]`);
+                    if (el) {
+                        el.value = val;
+                        // Trigger animations/highlights to show it was auto-filled
+                        el.classList.add('bg-green-50', 'border-green-300');
+                        setTimeout(() => el.classList.remove('bg-green-50', 'border-green-300'), 2000);
+                    }
+                }
+            }
+
+            // Trigger Recalculate
+            const qtyInput = container.querySelector('.entry-qty-input');
+            if (qtyInput && qtyInput.value) {
+                recalcEntryFIFO(idx);
+                checkStockWarning();
+            }
+
+            // Update Header photo input array just in case we need it server side
+            const form = document.getElementById('shipmentForm');
+            const hidden = document.createElement('input');
+            hidden.type = 'hidden';
+            hidden.name = `entries[${idx}][foto_path]`;
+            // Note: preview_url might be absolute; backend store should handle or we pass just the path
+            // For now, it's sufficient for UI filling. Server side isn't strictly storing N photos yet.
+            form.appendChild(hidden);
         }
 
         // ── Initialize ──

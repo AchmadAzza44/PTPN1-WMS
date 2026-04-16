@@ -61,6 +61,33 @@ class OCRController extends Controller
         return redirect()->route('ocr.waiting', ['id' => $job->id]);
     }
 
+    // ── Endpoint API untuk "In-Form Scanner" (AJAX) ──────────────────────────
+    public function storeInline(Request $request): JsonResponse
+    {
+        $request->validate([
+            'document' => 'required|image|max:10240',
+            'jenis' => 'required|in:sir20,rss1,do,surat_kuasa',
+        ]);
+
+        $previewPath = $request->file('document')->store('temp/ocr', 'public');
+
+        $job = OcrJob::create([
+            'jenis' => $request->jenis,
+            'type' => $request->input('type', 'outbound'),
+            'preview_path' => $previewPath,
+            'status' => 'pending',
+        ]);
+
+        ProcessOcrDocument::dispatch($job->id);
+
+        return response()->json([
+            'success' => true,
+            'job_id' => $job->id,
+            'message' => 'OCR Job queued',
+            'preview_url' => $job->previewUrl(),
+        ]);
+    }
+
     // ── Halaman waiting — view dengan JS polling ──────────────────────────────
 
     public function waiting(int $id)
