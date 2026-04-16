@@ -67,6 +67,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/reports/realtime', [ReportController::class, 'realtimeDashboard'])->name('reports.realtime');
         Route::get('/reports/api/data', [ReportController::class, 'apiRealtimeData'])->name('reports.api.data');
         Route::get('/report/daily-pdf', [ReportController::class, 'downloadDailyPDF'])->name('report.daily.pdf');
+        Route::get('/report/lot-pdf', [ReportController::class, 'downloadLotPDF'])->name('report.lot.pdf');
     });
 
     // ╔══════════════════════════════════════════════════════════╗

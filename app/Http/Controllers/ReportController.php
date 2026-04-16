@@ -137,4 +137,37 @@ class ReportController extends Controller
         $pdf = Pdf::loadView('reports.daily_pdf', $data)->setPaper('a4', 'landscape');
         return $pdf->stream("Laporan_Harian_Mutasi_$date.pdf");
     }
+
+    /**
+     * Download PDF Laporan Daftar Stok Lot dan Palet
+     * Berdasarkan rentang waktu tertentu, mencakup yang tersedia dan sudah keluar.
+     */
+    public function downloadLotPDF(Request $request)
+    {
+        $startDate = $request->start_date ?? now()->subDays(7)->format('Y-m-d');
+        $endDate = $request->end_date ?? now()->format('Y-m-d');
+
+        $lots = StockLot::with('details')
+            ->whereDate('inbound_at', '<=', $endDate)
+            ->where(function ($q) use ($startDate) {
+                $q->whereNull('outbound_at')
+                  ->orWhereDate('outbound_at', '>=', $startDate);
+            })
+            ->orderBy('quality_type')
+            ->orderBy('lot_number')
+            ->get();
+
+        $data = [
+            'start_date' => \Carbon\Carbon::parse($startDate)->translatedFormat('d F Y'),
+            'end_date'   => \Carbon\Carbon::parse($endDate)->translatedFormat('d F Y'),
+            'lots'       => $lots,
+            'kepada' => 'Kepala Bagian Teknik dan Pengolahan (TNP)',
+            'dari' => 'Kepala Bagian Manajemen Aset dan Pemasaran',
+            'koordinator' => 'Baktiar Yusuf, SE',
+            'krani' => 'Friska Rajagukguk'
+        ];
+
+        $pdf = Pdf::loadView('reports.lot_pdf', $data)->setPaper('a4', 'portrait');
+        return $pdf->stream("Laporan_Stok_Lot_dan_Palet_{$startDate}_sampai_{$endDate}.pdf");
+    }
 }
