@@ -60,7 +60,7 @@
                     @foreach($group->shipments as $sidx => $ship)
                     <div class="text-sm border-b border-slate-100 pb-2 mb-2 last:border-0 last:pb-0 last:mb-0">
                         <div class="flex justify-between font-bold text-slate-700">
-                            <span>PO: {{ $ship->purchaseOrder->po_number ?? '-' }} ({{ $ship->purchaseOrder->contract->contract_number ?? '-' }})</span>
+                            <span>PO: {{ $ship->purchaseOrder?->po_number ?? '-' }} ({{ $ship->purchaseOrder?->contract?->contract_number ?? '-' }})</span>
                             <span>{{ number_format($ship->items->sum('qty_loaded_kg'), 0) }} Kg</span>
                         </div>
                         <div class="text-xs text-slate-500 mt-1">

@@ -239,7 +239,7 @@
                 {{-- Standalone Shipments (Legacy) --}}
                 @foreach($standaloneShipments as $shipment)
                 @php
-                    $searchVal = strtolower($shipment->transporter_name . ' ' . ($shipment->purchaseOrder->contract->buyer_name ?? ''));
+                    $searchVal = strtolower($shipment->transporter_name . ' ' . ($shipment->purchaseOrder?->contract?->buyer_name ?? ''));
                     $totalKg = $shipment->items->sum('qty_loaded_kg');
                 @endphp
                 <tr data-search="{{ $searchVal }}">
@@ -249,7 +249,7 @@
                     </td>
                     <td>
                         <p style="font-weight:600;color:var(--text-primary);margin:0;font-size:12px;">{{ $shipment->transporter_name }}</p>
-                        <p style="font-size:11px;color:var(--text-secondary);margin:2px 0 0;">{{ $shipment->purchaseOrder->contract->buyer_name ?? '-' }}</p>
+                        <p style="font-size:11px;color:var(--text-secondary);margin:2px 0 0;">{{ $shipment->purchaseOrder?->contract?->buyer_name ?? '-' }}</p>
                     </td>
                     <td>
                         <span style="font-size:12px;font-weight:bold;color:var(--text-primary);">1 Dokumen (PO)</span>

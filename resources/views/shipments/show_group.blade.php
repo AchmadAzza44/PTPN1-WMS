@@ -72,7 +72,7 @@
                     <div class="flex justify-between items-start mb-3">
                         <h4 class="font-bold text-slate-800 flex items-center">
                             <span class="w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center mr-2">#{{ $idx + 1 }}</span>
-                            PO: {{ $shipment->purchaseOrder->po_number ?? '-' }}
+                            PO: {{ $shipment->purchaseOrder?->po_number ?? '-' }}
                         </h4>
                         <span class="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-md text-xs font-bold font-mono">
                             {{ number_format($shipment->documented_qty_kg, 2) }} Kg
@@ -80,7 +80,7 @@
                     </div>
 
                     <div class="text-sm grid grid-cols-2 gap-2 mb-4 bg-slate-50 p-3 rounded-lg">
-                        <div><span class="text-slate-500 block text-xs">Kontrak</span> <span class="font-mono font-bold">{{ $shipment->purchaseOrder->contract->contract_number ?? '-' }}</span></div>
+                        <div><span class="text-slate-500 block text-xs">Kontrak</span> <span class="font-mono font-bold">{{ $shipment->purchaseOrder?->contract?->contract_number ?? '-' }}</span></div>
                         <div><span class="text-slate-500 block text-xs">Surat Kuasa</span> <span class="font-mono font-bold">{{ $shipment->surat_kuasa_number ?? '-' }}</span></div>
                     </div>
 
@@ -130,7 +130,7 @@
                             <p class="text-xs font-bold text-slate-400 uppercase mb-2">Surat Jalan Per Kontrak:</p>
                             @foreach($group->shipments as $idx => $shipment)
                             <div class="p-2 border border-slate-200 rounded-lg bg-slate-50 mb-2">
-                                <p class="text-xs font-bold text-slate-700 mb-2">#{{ $idx+1 }} - PO {{ $shipment->purchaseOrder->po_number }}</p>
+                                <p class="text-xs font-bold text-slate-700 mb-2">#{{ $idx+1 }} - PO {{ $shipment->purchaseOrder?->po_number }}</p>
                                 <div class="flex gap-2">
                                     <a href="{{ route('shipments.print_sj', $shipment->id) }}" target="_blank"
                                         class="flex-1 py-1.5 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded text-center transition-colors text-[10px]">

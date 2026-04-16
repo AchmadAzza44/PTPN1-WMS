@@ -43,13 +43,13 @@
                     <div class="grid grid-cols-2 gap-4 text-sm">
                         <div>
                             <p class="text-slate-500">Nama Pembeli</p>
-                            <p class="font-bold text-slate-800">{{ $shipment->purchaseOrder->contract->buyer_name ?? '-' }}
+                            <p class="font-bold text-slate-800">{{ $shipment->purchaseOrder?->contract?->buyer_name ?? '-' }}
                             </p>
                         </div>
                         <div>
                             <p class="text-slate-500">Nomor Kontrak</p>
                             <p class="font-mono font-bold text-slate-800">
-                                {{ $shipment->purchaseOrder->contract->contract_number ?? '-' }}
+                                {{ $shipment->purchaseOrder?->contract?->contract_number ?? '-' }}
                             </p>
                         </div>
                         <div>
@@ -69,9 +69,9 @@
                                 <i data-lucide="alert-circle" class="w-4 h-4 mr-1.5"></i>
                                 Pengiriman Parsial
                             </span>
-                            <span class="text-yellow-900 font-mono font-bold">Sisa: {{ number_format($shipment->purchaseOrder->qty_ordered_kg - $shipment->purchaseOrder->qty_served_kg, 2) }} Kg</span>
+                            <span class="text-yellow-900 font-mono font-bold">Sisa: {{ number_format($shipment->purchaseOrder?->qty_ordered_kg - $shipment->purchaseOrder?->qty_served_kg, 2) }} Kg</span>
                         </div>
-                        <a href="{{ route('shipments.create', ['do_number_manual' => $shipment->purchaseOrder->po_number]) }}" class="flex items-center justify-center w-full py-2.5 px-4 bg-yellow-500 hover:bg-yellow-600 text-white font-bold rounded-lg text-center transition-all shadow-lg shadow-yellow-500/30 text-sm">
+                        <a href="{{ route('shipments.create', ['do_number_manual' => $shipment->purchaseOrder?->po_number]) }}" class="flex items-center justify-center w-full py-2.5 px-4 bg-yellow-500 hover:bg-yellow-600 text-white font-bold rounded-lg text-center transition-all shadow-lg shadow-yellow-500/30 text-sm">
                             <i data-lucide="truck" class="w-4 h-4 mr-2"></i> Buat Lanjutan Pengiriman (Auto-Fill Data)
                         </a>
                     </div>
