@@ -50,7 +50,7 @@
                         </div>
                         <div>
                             <p class="text-slate-500">Total Muatan</p>
-                            <p class="font-bold text-slate-800">{{ number_format($group->totalWeight, 0, ',', '.') }} Kg</p>
+                            <p class="font-bold text-slate-800">{{ number_format($group->total_weight, 0, ',', '.') }} Kg</p>
                         </div>
                         <div>
                             <p class="text-slate-500">Nama Pembeli</p>

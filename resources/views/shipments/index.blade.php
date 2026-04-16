@@ -216,7 +216,7 @@
                         <span style="font-size:12px;font-weight:bold;color:var(--text-primary);">{{ count($group->shipments) }} Dokumen (PO/Kontrak)</span>
                     </td>
                     <td style="text-align:right;">
-                        <span class="mono" style="font-weight:700;color:#1e3a8a;">{{ number_format($group->totalWeight, 0) }}</span>
+                        <span class="mono" style="font-weight:700;color:#1e3a8a;">{{ number_format($group->total_weight, 0) }}</span>
                         <span style="font-size:11px;color:var(--text-muted);margin-left:2px;">KG</span>
                     </td>
                     <td style="text-align:center;">
@@ -338,7 +338,7 @@
                         Muatan ({{ count($group->shipments) }} Dok)
                     </span>
                     <span class="ship-val">
-                        <span style="font-family:var(--font-mono);font-size:16px;font-weight:900;color:#1e40af;">{{ number_format($group->totalWeight, 0) }}</span>
+                        <span style="font-family:var(--font-mono);font-size:16px;font-weight:900;color:#1e40af;">{{ number_format($group->total_weight, 0) }}</span>
                         <span style="font-size:11px;color:#94a3b8;font-weight:400;"> KG</span>
                     </span>
                 </div>

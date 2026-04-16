@@ -26,7 +26,7 @@
                         </div>
                         <h3 class="text-lg font-bold text-slate-800">{{ $group->ba_number ?? ('BA #' . $group->id) }}</h3>
                         <p class="text-slate-500 text-sm">Pembeli: {{ $group->buyer_name ?? '-' }}</p>
-                        <p class="text-slate-500 text-sm font-bold mt-1">Total Muatan: {{ number_format($group->totalWeight, 0) }} Kg ({{ count($group->shipments) }} Dokumen)</p>
+                        <p class="text-slate-500 text-sm font-bold mt-1">Total Muatan: {{ number_format($group->total_weight, 0) }} Kg ({{ count($group->shipments) }} Dokumen)</p>
                     </div>
                     <form action="{{ route('shipments.verify', $group->id) }}" method="POST" class="w-full md:w-auto border-t md:border-t-0 md:border-l border-slate-200 pt-4 md:pt-0 md:pl-4">
                         @csrf
