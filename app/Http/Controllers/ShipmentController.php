@@ -30,6 +30,7 @@ class ShipmentController extends Controller
         $standaloneShipments = Shipment::whereNull('shipment_group_id')
             ->with(['purchaseOrder.contract', 'items'])
             ->orderBy('created_at', 'desc')
+            ->limit(100)
             ->get();
 
         return view('shipments.index', compact('groups', 'standaloneShipments'));
@@ -352,6 +353,7 @@ class ShipmentController extends Controller
             ->where('status', 'draft')
             ->with(['purchaseOrder.contract', 'items.stockLot'])
             ->orderBy('created_at', 'desc')
+            ->limit(100)
             ->get();
 
         return view('shipments.verify', compact('groups', 'standaloneShipments'));

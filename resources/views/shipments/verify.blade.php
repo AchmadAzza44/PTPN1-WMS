@@ -21,7 +21,7 @@
                             </span>
                             <span class="text-slate-400 text-xs">
                                 <i data-lucide="clock" class="w-3 h-3 inline mr-1"></i>
-                                {{ $group->created_at->diffForHumans() }}
+                                {{ $group->created_at ? $group->created_at->diffForHumans() : '-' }}
                             </span>
                         </div>
                         <h3 class="text-lg font-bold text-slate-800">{{ $group->ba_number ?? ('BA #' . $group->id) }}</h3>
@@ -66,7 +66,7 @@
                         <div class="text-xs text-slate-500 mt-1">
                             Lots: 
                             @foreach($ship->items as $item)
-                                <span class="inline-block bg-white border border-slate-200 px-1 rounded mr-1 font-mono">{{ $item->stockLot->lot_number }}</span>
+                                <span class="inline-block bg-white border border-slate-200 px-1 rounded mr-1 font-mono">{{ $item->stockLot?->lot_number ?? 'Dihapus' }}</span>
                             @endforeach
                         </div>
                     </div>

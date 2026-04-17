@@ -201,12 +201,12 @@
                 {{-- Grouped Shipments (Berita Acara) --}}
                 @foreach($groups as $group)
                 @php
-                    $searchVal = strtolower($group->ba_number . ' ' . $group->transporter_name . ' ' . $group->buyer_name);
+                    $searchVal = strtolower(($group->ba_number ?? '') . ' ' . ($group->transporter_name ?? '') . ' ' . ($group->buyer_name ?? ''));
                 @endphp
                 <tr data-search="{{ $searchVal }}">
                     <td>
                         <span class="mono" style="font-weight:700;color:var(--text-primary);font-size:12px;">{{ $group->ba_number ?? ('BA #' . $group->id) }}</span>
-                        <p style="font-size:11px;color:var(--text-muted);margin:2px 0 0;">{{ $group->created_at->format('d M Y H:i') }}</p>
+                        <p style="font-size:11px;color:var(--text-muted);margin:2px 0 0;">{{ $group->created_at ? $group->created_at->format('d M Y H:i') : '-' }}</p>
                     </td>
                     <td>
                         <p style="font-weight:600;color:var(--text-primary);margin:0;font-size:12px;">{{ $group->transporter_name }}</p>
@@ -239,13 +239,13 @@
                 {{-- Standalone Shipments (Legacy) --}}
                 @foreach($standaloneShipments as $shipment)
                 @php
-                    $searchVal = strtolower($shipment->transporter_name . ' ' . ($shipment->purchaseOrder?->contract?->buyer_name ?? ''));
+                    $searchVal = strtolower(($shipment->transporter_name ?? '') . ' ' . ($shipment->purchaseOrder?->contract?->buyer_name ?? ''));
                     $totalKg = $shipment->items->sum('qty_loaded_kg');
                 @endphp
                 <tr data-search="{{ $searchVal }}">
                     <td>
                         <span class="mono" style="font-weight:700;color:var(--text-primary);font-size:12px;">Pengiriman #{{ $shipment->id }}</span>
-                        <p style="font-size:11px;color:var(--text-muted);margin:2px 0 0;">{{ $shipment->created_at->format('d M Y H:i') }} (Legacy)</p>
+                        <p style="font-size:11px;color:var(--text-muted);margin:2px 0 0;">{{ $shipment->created_at ? $shipment->created_at->format('d M Y H:i') : '-' }} (Legacy)</p>
                     </td>
                     <td>
                         <p style="font-weight:600;color:var(--text-primary);margin:0;font-size:12px;">{{ $shipment->transporter_name }}</p>
@@ -295,14 +295,14 @@
     <div class="ship-mobile" style="padding-top:10px;padding-bottom:4px;">
         @foreach($groups as $group)
         @php
-            $searchVal = strtolower($group->ba_number . ' ' . $group->transporter_name . ' ' . $group->buyer_name);
+            $searchVal = strtolower(($group->ba_number ?? '') . ' ' . ($group->transporter_name ?? '') . ' ' . ($group->buyer_name ?? ''));
         @endphp
         <div class="ship-card" data-ship data-search="{{ $searchVal }}">
             <div class="ship-card-head">
                 <div class="ship-id">
                     <small>Berita Acara</small>
                     {{ $group->ba_number ?? ('BA #' . $group->id) }}
-                    <span style="font-size:11px;font-weight:500;color:#64748b;display:block;margin-top:2px;font-family:'Inter',sans-serif;">{{ $group->created_at->format('d M Y, H:i') }}</span>
+                    <span style="font-size:11px;font-weight:500;color:#64748b;display:block;margin-top:2px;font-family:'Inter',sans-serif;">{{ $group->created_at ? $group->created_at->format('d M Y, H:i') : '-' }}</span>
                 </div>
                 @if($group->status == 'completed')
                     <span class="badge badge-green" style="flex-shrink:0;font-size:11px;">Selesai</span>
