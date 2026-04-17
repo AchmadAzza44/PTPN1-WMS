@@ -21,24 +21,19 @@ class ShipmentController extends Controller
      */
     public function index()
     {
-        try {
-            // Group-aware: prioritas tampilkan ShipmentGroup, fallback ke standalone Shipment
-            $groups = ShipmentGroup::with(['shipments.purchaseOrder.contract', 'shipments.items'])
-                ->orderBy('created_at', 'desc')
-                ->paginate(10);
+        // Group-aware: prioritas tampilkan ShipmentGroup, fallback ke standalone Shipment
+        $groups = ShipmentGroup::with(['shipments.purchaseOrder.contract', 'shipments.items'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
 
-            // Legacy standalone shipments (tanpa group)
-            $standaloneShipments = Shipment::whereNull('shipment_group_id')
-                ->with(['purchaseOrder.contract', 'items'])
-                ->orderBy('created_at', 'desc')
-                ->limit(100)
-                ->get();
+        // Legacy standalone shipments (tanpa group)
+        $standaloneShipments = Shipment::whereNull('shipment_group_id')
+            ->with(['purchaseOrder.contract', 'items'])
+            ->orderBy('created_at', 'desc')
+            ->limit(100)
+            ->get();
 
-            $html = view('shipments.index', compact('groups', 'standaloneShipments'))->render();
-            return response($html);
-        } catch (\Throwable $e) {
-            return response("ERROR DEBUG: " . $e->getMessage() . " in " . $e->getFile() . " on line " . $e->getLine(), 500);
-        }
+        return view('shipments.index', compact('groups', 'standaloneShipments'));
     }
 
     /**
@@ -347,26 +342,21 @@ class ShipmentController extends Controller
 
     public function indexVerification()
     {
-        try {
-            // Show 'draft' groups
-            $groups = ShipmentGroup::with(['shipments.purchaseOrder.contract', 'shipments.items.stockLot'])
-                ->where('status', 'draft')
-                ->orderBy('created_at', 'desc')
-                ->get();
+        // Show 'draft' groups
+        $groups = ShipmentGroup::with(['shipments.purchaseOrder.contract', 'shipments.items.stockLot'])
+            ->where('status', 'draft')
+            ->orderBy('created_at', 'desc')
+            ->get();
 
-            // Legacy standalone draft shipments
-            $standaloneShipments = Shipment::whereNull('shipment_group_id')
-                ->where('status', 'draft')
-                ->with(['purchaseOrder.contract', 'items.stockLot'])
-                ->orderBy('created_at', 'desc')
-                ->limit(100)
-                ->get();
+        // Legacy standalone draft shipments
+        $standaloneShipments = Shipment::whereNull('shipment_group_id')
+            ->where('status', 'draft')
+            ->with(['purchaseOrder.contract', 'items.stockLot'])
+            ->orderBy('created_at', 'desc')
+            ->limit(100)
+            ->get();
 
-            $html = view('shipments.verify', compact('groups', 'standaloneShipments'))->render();
-            return response($html);
-        } catch (\Throwable $e) {
-            return response("ERROR DEBUG: " . $e->getMessage() . " in " . $e->getFile() . " on line " . $e->getLine(), 500);
-        }
+        return view('shipments.verify', compact('groups', 'standaloneShipments'));
     }
 
     public function verify(Request $request, $id)
